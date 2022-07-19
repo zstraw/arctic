@@ -26,7 +26,9 @@ import com.netease.arctic.flink.read.hybrid.split.ArcticSplit;
 import com.netease.arctic.flink.read.source.ArcticScanContext;
 import com.netease.arctic.flink.read.source.DataIterator;
 import com.netease.arctic.flink.table.ArcticTableLoader;
+import com.netease.arctic.flink.util.ArcticUtils;
 import com.netease.arctic.flink.write.FlinkSink;
+import com.netease.arctic.table.ArcticTable;
 import com.netease.arctic.table.KeyedTable;
 import com.netease.arctic.table.TableIdentifier;
 import com.netease.arctic.table.TableProperties;
@@ -133,7 +135,7 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
   @Test
   public void testArcticSourceStatic() throws Exception {
     LOG.info("testArcticSourceStatic");
-    ArcticSource<RowData> arcticSource = initArcticSource(false);
+    ArcticSource<RowData> arcticSource = initArcticSource(false, PK_TABLE_ID);
 
     StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
     // enable checkpoint
@@ -168,15 +170,33 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
   }
 
   public void testArcticSource(FailoverType failoverType) throws Exception {
+    TableIdentifier source = TableIdentifier.of(TEST_CATALOG_NAME, TEST_DB_NAME, "source_" +
+        UUID.randomUUID());
+
+    KeyedTable sourceTable;
+    if (!testCatalog.tableExists(source)) {
+      sourceTable = (KeyedTable) testCatalog
+          .newTableBuilder(source, TABLE_SCHEMA)
+          .withProperty(TableProperties.LOCATION, tableDir.getPath() + "/" + source.getTableName())
+          .withPartitionSpec(SPEC)
+          .withPrimaryKeySpec(PRIMARY_KEY_SPEC)
+          .create();
+    } else {
+      sourceTable = testCatalog.loadTable(source).asKeyedTable();
+    }
+
     List<RowData> expected = new ArrayList<>(exceptsCollection());
+    writeUpdate(expected, sourceTable);
     List<RowData> updated = updateRecords();
-    writeUpdate(updated, testFailoverTable);
+    writeUpdate(updated, sourceTable);
     List<RowData> records = generateRecords(2, 1);
-    writeUpdate(records, testFailoverTable);
+    writeUpdate(records, sourceTable);
+
     expected.addAll(updated);
     expected.addAll(records);
 
-    ArcticSource<RowData> arcticSource = initArcticSource(false);
+    ArcticSource<RowData> arcticSource = initArcticSource(false, source);
+
     StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
     // enable checkpoint
     env.enableCheckpointing(1000);
@@ -188,9 +208,8 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
             "ArcticParallelSource")
         .setParallelism(PARALLELISM);
 
-    RecordCounterToFail recordCounterToFail = new RecordCounterToFail();
     DataStream<RowData> streamFailingInTheMiddleOfReading =
-        recordCounterToFail.wrapWithFailureAfter(input, expected.size() / 2);
+        RecordCounterToFail.wrapWithFailureAfter(input, expected.size() / 2);
 
     FlinkSink
         .forRowData(streamFailingInTheMiddleOfReading)
@@ -202,11 +221,11 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     JobClient jobClient = env.executeAsync("Bounded Arctic Source Failover Test");
     JobID jobId = jobClient.getJobID();
 
-    recordCounterToFail.waitToFail();
+    RecordCounterToFail.waitToFail();
     triggerFailover(
         failoverType,
         jobId,
-        recordCounterToFail::continueProcessing,
+        RecordCounterToFail::continueProcessing,
         miniClusterResource.getMiniCluster());
 
     assertRecords(testFailoverTable, expected, Duration.ofMillis(10), 12000);
@@ -215,7 +234,7 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
   @Test
   public void testArcticContinuousSource() throws Exception {
     LOG.info("testArcticContinuousSource");
-    ArcticSource<RowData> arcticSource = initArcticSource(true);
+    ArcticSource<RowData> arcticSource = initArcticSource(true, PK_TABLE_ID);
     StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
     // enable checkpoint
     env.enableCheckpointing(1000);
@@ -277,11 +296,27 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
   }
 
   public void testArcticContinuousSource(final FailoverType failoverType) throws Exception {
+    TableIdentifier source = TableIdentifier.of(TEST_CATALOG_NAME, TEST_DB_NAME, "source_" +
+        UUID.randomUUID());
+
+    KeyedTable sourceTable;
+    if (!testCatalog.tableExists(source)) {
+      sourceTable = (KeyedTable) testCatalog
+          .newTableBuilder(source, TABLE_SCHEMA)
+          .withProperty(TableProperties.LOCATION, tableDir.getPath() + "/" + source.getTableName())
+          .withPartitionSpec(SPEC)
+          .withPrimaryKeySpec(PRIMARY_KEY_SPEC)
+          .create();
+    } else {
+      sourceTable = testCatalog.loadTable(source).asKeyedTable();
+    }
+
     List<RowData> expected = new ArrayList<>(Arrays.asList(excepts()));
-    writeUpdate(testFailoverTable);
+    writeUpdate(expected, sourceTable);
+    writeUpdate(sourceTable);
     expected.addAll(Arrays.asList(excepts2()));
 
-    ArcticSource<RowData> arcticSource = initArcticSource(true);
+    ArcticSource<RowData> arcticSource = initArcticSource(true, source);
     StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
     // enable checkpoint
     env.enableCheckpointing(1000);
@@ -467,37 +502,40 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     return rowData;
   }
 
-  private ArcticSource<RowData> initArcticSource(boolean isStreaming) {
-    return initArcticSource(isStreaming, FILE_SCAN_STARTUP_MODE_EARLIEST);
+  private ArcticSource<RowData> initArcticSource(boolean isStreaming, TableIdentifier tableIdentifier) {
+    return initArcticSource(isStreaming, FILE_SCAN_STARTUP_MODE_EARLIEST, tableIdentifier);
   }
 
   private ArcticSource<RowData> initArcticSourceWithLatest() {
-    return initArcticSource(true, FILE_SCAN_STARTUP_MODE_LATEST);
+    return initArcticSource(true, FILE_SCAN_STARTUP_MODE_LATEST, PK_TABLE_ID);
   }
 
-  private ArcticSource<RowData> initArcticSource(boolean isStreaming, String scanStartupMode) {
-    ArcticTableLoader tableLoader = initLoader();
+  private ArcticSource<RowData> initArcticSource(boolean isStreaming, String scanStartupMode,
+                                                 TableIdentifier tableIdentifier) {
+    ArcticTableLoader tableLoader = initLoader(tableIdentifier);
+    KeyedTable t = ArcticUtils.loadArcticTable(tableLoader).asKeyedTable();
+
     ArcticScanContext arcticScanContext = initArcticScanContext(isStreaming, scanStartupMode);
-    ReaderFunction<RowData> rowDataReaderFunction = initRowDataReadFunction();
-    TypeInformation<RowData> typeInformation = InternalTypeInfo.of(FlinkSchemaUtil.convert(testKeyedTable.schema()));
+    ReaderFunction<RowData> rowDataReaderFunction = initRowDataReadFunction(t);
+    TypeInformation<RowData> typeInformation = InternalTypeInfo.of(FlinkSchemaUtil.convert(t.schema()));
 
     return new ArcticSource<>(
         tableLoader,
         arcticScanContext,
         rowDataReaderFunction,
         typeInformation,
-        testKeyedTable.name());
+        tableIdentifier.getTableName());
   }
 
-  private RowDataReaderFunction initRowDataReadFunction() {
+  private RowDataReaderFunction initRowDataReadFunction(KeyedTable table) {
     return new RowDataReaderFunction(
         new Configuration(),
-        testKeyedTable.schema(),
-        testKeyedTable.schema(),
-        testKeyedTable.primaryKeySpec(),
+        table.schema(),
+        table.schema(),
+        table.primaryKeySpec(),
         null,
         true,
-        testKeyedTable.io()
+        table.io()
     );
   }
 
@@ -506,21 +544,21 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
         .monitorInterval(Duration.ofMillis(500)).build();
   }
 
-  private ArcticTableLoader initLoader() {
-    return ArcticTableLoader.of(PK_TABLE_ID, catalogBuilder);
+  private ArcticTableLoader initLoader(TableIdentifier tableIdentifier) {
+    return ArcticTableLoader.of(tableIdentifier, catalogBuilder);
   }
 
   // ------------------------------------------------------------------------
   //  mini cluster failover utilities
   // ------------------------------------------------------------------------
 
-  private class RecordCounterToFail {
+  private static class RecordCounterToFail {
 
-    private AtomicInteger records;
-    private CompletableFuture<Void> fail;
-    private CompletableFuture<Void> continueProcessing;
+    private static AtomicInteger records;
+    private static CompletableFuture<Void> fail;
+    private static CompletableFuture<Void> continueProcessing;
 
-    private <T> DataStream<T> wrapWithFailureAfter(DataStream<T> stream, int failAfter) {
+    private static <T> DataStream<T> wrapWithFailureAfter(DataStream<T> stream, int failAfter) {
 
       records = new AtomicInteger();
       fail = new CompletableFuture<>();
@@ -537,11 +575,11 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
           });
     }
 
-    private void waitToFail() throws ExecutionException, InterruptedException {
+    private static void waitToFail() throws ExecutionException, InterruptedException {
       fail.get();
     }
 
-    private void continueProcessing() {
+    private static void continueProcessing() {
       continueProcessing.complete(null);
     }
   }

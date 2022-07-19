@@ -148,7 +148,7 @@ public class RowDataReaderFunctionTest extends ContinuousSplitPlannerImplTest {
       for (RowData record : input) {
         taskWriter.write(record);
       }
-      commit(taskWriter.complete(), false);
+      commit(taskWriter.complete(), false, arcticTable);
     }
   }
 

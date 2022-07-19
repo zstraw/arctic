@@ -72,7 +72,7 @@ public class ContinuousSplitPlannerImplTest extends FlinkTestBase {
       for (RowData record : baseData) {
         taskWriter.write(record);
       }
-      commit(taskWriter.complete(), true);
+      commit(taskWriter.complete(), true, testKeyedTable);
     }
 
     //write change insert
@@ -87,7 +87,7 @@ public class ContinuousSplitPlannerImplTest extends FlinkTestBase {
       for (RowData record : insert) {
         taskWriter.write(record);
       }
-      commit(taskWriter.complete(), true);
+      commit(taskWriter.complete(), true, testKeyedTable);
     }
 
     //write change delete
@@ -103,17 +103,17 @@ public class ContinuousSplitPlannerImplTest extends FlinkTestBase {
       for (RowData record : update) {
         taskWriter.write(record);
       }
-      commit(taskWriter.complete(), false);
+      commit(taskWriter.complete(), false, testKeyedTable);
     }
   }
 
-  protected void commit(WriteResult result, boolean base) {
+  protected void commit(WriteResult result, boolean base, KeyedTable table) {
     if (base) {
-      AppendFiles baseAppend = testKeyedTable.baseTable().newAppend();
+      AppendFiles baseAppend = table.baseTable().newAppend();
       Arrays.stream(result.dataFiles()).forEach(baseAppend::appendFile);
       baseAppend.commit();
     } else {
-      AppendFiles changeAppend = testKeyedTable.changeTable().newAppend();
+      AppendFiles changeAppend = table.changeTable().newAppend();
       Arrays.stream(result.dataFiles()).forEach(changeAppend::appendFile);
       changeAppend.commit();
     }
