@@ -30,6 +30,7 @@ import com.netease.arctic.flink.write.FlinkSink;
 import com.netease.arctic.table.KeyedTable;
 import com.netease.arctic.table.TableIdentifier;
 import com.netease.arctic.table.TableProperties;
+import org.apache.commons.lang.math.RandomUtils;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.JobStatus;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
@@ -71,6 +72,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Random;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -99,12 +102,15 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
 
   protected KeyedTable testFailoverTable;
   protected static final String sinkTableName = "test_sink_exactly_once";
-  protected static final TableIdentifier FAIL_TABLE_ID =
-      TableIdentifier.of(TEST_CATALOG_NAME, TEST_DB_NAME, sinkTableName);
+  protected static String perUtTableName;
+  protected static TableIdentifier FAIL_TABLE_ID = null;
 
   @Before
   public void testSetup() throws IOException {
+    perUtTableName = sinkTableName + "_" + UUID.randomUUID();
     testCatalog = CatalogLoader.load(AMS.getUrl());
+
+    FAIL_TABLE_ID = TableIdentifier.of(TEST_CATALOG_NAME, TEST_DB_NAME, perUtTableName);
 
     String db = FAIL_TABLE_ID.getDatabase();
     if (!testCatalog.listDatabases().contains(db)) {
@@ -114,7 +120,7 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     if (!testCatalog.tableExists(FAIL_TABLE_ID)) {
       testFailoverTable = (KeyedTable) testCatalog
           .newTableBuilder(FAIL_TABLE_ID, TABLE_SCHEMA)
-          .withProperty(TableProperties.LOCATION, tableDir.getPath() + "/" + sinkTableName)
+          .withProperty(TableProperties.LOCATION, tableDir.getPath() + "/" + perUtTableName)
           .withPartitionSpec(SPEC)
           .withPrimaryKeySpec(PRIMARY_KEY_SPEC)
           .create();
