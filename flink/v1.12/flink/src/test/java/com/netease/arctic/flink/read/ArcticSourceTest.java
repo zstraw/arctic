@@ -170,9 +170,9 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
   public void testArcticSource(FailoverType failoverType) throws Exception {
     List<RowData> expected = new ArrayList<>(exceptsCollection());
     List<RowData> updated = updateRecords();
-    writeUpdate(updated);
+    writeUpdate(updated, testFailoverTable);
     List<RowData> records = generateRecords(2, 1);
-    writeUpdate(records);
+    writeUpdate(records, testFailoverTable);
     expected.addAll(updated);
     expected.addAll(records);
 
@@ -227,7 +227,7 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     assertArrayEquals(excepts(), actualResult);
 
     LOG.info("begin write update_before update_after data and commit new snapshot to change table.");
-    writeUpdate();
+    writeUpdate(testKeyedTable);
 
     actualResult = collectRecordsFromUnboundedStream(clientAndIterator, excepts2().length);
 
@@ -251,7 +251,7 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
       if (JobStatus.RUNNING == jobClient.getJobStatus().get()) {
         Thread.sleep(500);
         LOG.info("begin write update_before update_after data and commit new snapshot to change table.");
-        writeUpdate();
+        writeUpdate(testKeyedTable);
         break;
       }
       Thread.sleep(100);
@@ -263,13 +263,13 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     jobClient.cancel();
   }
 
-//  @Test
+    @Test
   public void testArcticContinuousSourceJobManagerFailover() throws Exception {
     LOG.info("testArcticContinuousSourceJobManagerFailover");
     testArcticContinuousSource(FailoverType.JM);
   }
 
-//  @Test
+    @Test
   public void testArcticContinuousSourceTaskManagerFailover() throws Exception {
     LOG.info("testArcticContinuousSourceTaskManagerFailover");
     testArcticContinuousSource(FailoverType.TM);
@@ -277,7 +277,7 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
 
   public void testArcticContinuousSource(final FailoverType failoverType) throws Exception {
     List<RowData> expected = new ArrayList<>(Arrays.asList(excepts()));
-    writeUpdate();
+    writeUpdate(testFailoverTable);
     expected.addAll(Arrays.asList(excepts2()));
 
     ArcticSource<RowData> arcticSource = initArcticSource(true);
@@ -306,7 +306,7 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
       Thread.sleep(10);
       List<RowData> records = generateRecords(2, i);
       expected.addAll(records);
-      writeUpdate(records);
+      writeUpdate(records, testFailoverTable);
       if (i == 2) {
         triggerFailover(failoverType, jobId, () -> {
         }, miniClusterResource.getMiniCluster());

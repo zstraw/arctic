@@ -20,6 +20,7 @@ package com.netease.arctic.flink.read.hybrid.enumerator;
 
 import com.netease.arctic.flink.FlinkTestBase;
 import com.netease.arctic.flink.write.KeyedRowDataTaskWriterFactory;
+import com.netease.arctic.table.KeyedTable;
 import org.apache.flink.table.data.GenericRowData;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.data.StringData;
@@ -57,7 +58,7 @@ public class ContinuousSplitPlannerImplTest extends FlinkTestBase {
   public void init() throws IOException {
     //write base
     {
-      TaskWriter<RowData> taskWriter = createTaskWriter(true);
+      TaskWriter<RowData> taskWriter = createTaskWriter(true, testKeyedTable);
       List<RowData> baseData = new ArrayList<RowData>() {{
         add(GenericRowData.ofKind(
             RowKind.INSERT, 1, StringData.fromString("john"), TimestampData.fromLocalDateTime(ldt)));
@@ -76,7 +77,7 @@ public class ContinuousSplitPlannerImplTest extends FlinkTestBase {
 
     //write change insert
     {
-      TaskWriter<RowData> taskWriter = createTaskWriter(false);
+      TaskWriter<RowData> taskWriter = createTaskWriter(false, testKeyedTable);
       List<RowData> insert = new ArrayList<RowData>() {{
         add(GenericRowData.ofKind(
             RowKind.INSERT, 5, StringData.fromString("mary"), TimestampData.fromLocalDateTime(ldt)));
@@ -91,7 +92,7 @@ public class ContinuousSplitPlannerImplTest extends FlinkTestBase {
 
     //write change delete
     {
-      TaskWriter<RowData> taskWriter = createTaskWriter(false);
+      TaskWriter<RowData> taskWriter = createTaskWriter(false, testKeyedTable);
       List<RowData> update = new ArrayList<RowData>() {{
         add(GenericRowData.ofKind(
             RowKind.DELETE, 5, StringData.fromString("mary"), TimestampData.fromLocalDateTime(ldt)));
@@ -118,9 +119,9 @@ public class ContinuousSplitPlannerImplTest extends FlinkTestBase {
     }
   }
 
-  protected TaskWriter<RowData> createTaskWriter(boolean base) {
+  protected TaskWriter<RowData> createTaskWriter(boolean base, KeyedTable arcticTable) {
     KeyedRowDataTaskWriterFactory taskWriterFactory =
-        new KeyedRowDataTaskWriterFactory(testKeyedTable, ROW_TYPE, base);
+        new KeyedRowDataTaskWriterFactory(arcticTable, ROW_TYPE, base);
     taskWriterFactory.setTransactionId(TRANSACTION_ID.getAndIncrement());
     taskWriterFactory.setMask(3);
     taskWriterFactory.initialize(0, 0);

@@ -26,6 +26,8 @@ import com.netease.arctic.flink.read.hybrid.split.ChangelogSplit;
 import com.netease.arctic.flink.read.source.DataIterator;
 import com.netease.arctic.scan.ArcticFileScanTask;
 import com.netease.arctic.scan.BaseArcticFileScanTask;
+import com.netease.arctic.table.ArcticTable;
+import com.netease.arctic.table.KeyedTable;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.table.data.GenericRowData;
 import org.apache.flink.table.data.RowData;
@@ -84,7 +86,7 @@ public class RowDataReaderFunctionTest extends ContinuousSplitPlannerImplTest {
     assertArrayEquals(excepts(), actual);
 
     long snapshotId = testKeyedTable.changeTable().currentSnapshot().snapshotId();
-    writeUpdate();
+    writeUpdate(testKeyedTable);
     testKeyedTable.changeTable().refresh();
     long nowSnapshotId = testKeyedTable.changeTable().currentSnapshot().snapshotId();
 
@@ -133,15 +135,15 @@ public class RowDataReaderFunctionTest extends ContinuousSplitPlannerImplTest {
         .toArray(new RowData[records.size()]);
   }
 
-  protected void writeUpdate() throws IOException {
+  protected void writeUpdate(KeyedTable arcticTable) throws IOException {
     //write change update
-    writeUpdate(updateRecords());
+    writeUpdate(updateRecords(), arcticTable);
   }
 
-  protected void writeUpdate(List<RowData> input) throws IOException {
+  protected void writeUpdate(List<RowData> input, KeyedTable arcticTable) throws IOException {
     //write change update
     {
-      TaskWriter<RowData> taskWriter = createTaskWriter(false);
+      TaskWriter<RowData> taskWriter = createTaskWriter(false, arcticTable);
 
       for (RowData record : input) {
         taskWriter.write(record);

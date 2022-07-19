@@ -48,7 +48,7 @@ public class FlinkSplitPlannerTest extends RowDataReaderFunctionTest {
     Assert.assertEquals(7, splitList.size());
 
     long startSnapshotId = testKeyedTable.changeTable().currentSnapshot().snapshotId();
-    writeUpdate();
+    writeUpdate(testKeyedTable);
     testKeyedTable.changeTable().refresh();
     long nowSnapshotId = testKeyedTable.changeTable().currentSnapshot().snapshotId();
     TableScan tableScan = testKeyedTable.changeTable().newScan().appendsBetween(startSnapshotId, nowSnapshotId);
