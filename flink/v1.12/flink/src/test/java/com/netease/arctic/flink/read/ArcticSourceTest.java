@@ -188,8 +188,9 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
             "ArcticParallelSource")
         .setParallelism(PARALLELISM);
 
+    RecordCounterToFail recordCounterToFail = new RecordCounterToFail();
     DataStream<RowData> streamFailingInTheMiddleOfReading =
-        RecordCounterToFail.wrapWithFailureAfter(input, expected.size() / 2);
+        recordCounterToFail.wrapWithFailureAfter(input, expected.size() / 2);
 
     FlinkSink
         .forRowData(streamFailingInTheMiddleOfReading)
@@ -201,11 +202,11 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     JobClient jobClient = env.executeAsync("Bounded Arctic Source Failover Test");
     JobID jobId = jobClient.getJobID();
 
-    RecordCounterToFail.waitToFail();
+    recordCounterToFail.waitToFail();
     triggerFailover(
         failoverType,
         jobId,
-        RecordCounterToFail::continueProcessing,
+        recordCounterToFail::continueProcessing,
         miniClusterResource.getMiniCluster());
 
     assertRecords(testFailoverTable, expected, Duration.ofMillis(10), 12000);
@@ -513,13 +514,13 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
   //  mini cluster failover utilities
   // ------------------------------------------------------------------------
 
-  private static class RecordCounterToFail {
+  private class RecordCounterToFail {
 
-    private static AtomicInteger records;
-    private static CompletableFuture<Void> fail;
-    private static CompletableFuture<Void> continueProcessing;
+    private AtomicInteger records;
+    private CompletableFuture<Void> fail;
+    private CompletableFuture<Void> continueProcessing;
 
-    private static <T> DataStream<T> wrapWithFailureAfter(DataStream<T> stream, int failAfter) {
+    private <T> DataStream<T> wrapWithFailureAfter(DataStream<T> stream, int failAfter) {
 
       records = new AtomicInteger();
       fail = new CompletableFuture<>();
@@ -536,11 +537,11 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
           });
     }
 
-    private static void waitToFail() throws ExecutionException, InterruptedException {
+    private void waitToFail() throws ExecutionException, InterruptedException {
       fail.get();
     }
 
-    private static void continueProcessing() {
+    private void continueProcessing() {
       continueProcessing.complete(null);
     }
   }
