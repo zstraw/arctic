@@ -134,6 +134,7 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
 
   @Test
   public void testArcticSourceStatic() throws Exception {
+    LOG.info("testArcticSourceStatic");
     ArcticSource<RowData> arcticSource = initArcticSource(false);
 
     StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
@@ -158,11 +159,13 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
 
   @Test
   public void testArcticSourceStaticJobManagerFailover() throws Exception {
+    LOG.info("testArcticSourceStaticJobManagerFailover");
     testArcticSource(FailoverType.JM);
   }
 
   @Test
   public void testArcticSourceStaticTaskManagerFailover() throws Exception {
+    LOG.info("testArcticSourceStaticTaskManagerFailover");
     testArcticSource(FailoverType.TM);
   }
 
@@ -212,6 +215,7 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
 
   @Test
   public void testArcticContinuousSource() throws Exception {
+    LOG.info("testArcticContinuousSource");
     ArcticSource<RowData> arcticSource = initArcticSource(true);
     StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
     // enable checkpoint
@@ -235,6 +239,7 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
 
   @Test
   public void testLatestStartupMode() throws Exception {
+    LOG.info("testLatestStartupMode");
     ArcticSource<RowData> arcticSource = initArcticSourceWithLatest();
     StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
     // enable checkpoint
@@ -262,11 +267,13 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
 
   @Test
   public void testArcticContinuousSourceJobManagerFailover() throws Exception {
+    LOG.info("testArcticContinuousSourceJobManagerFailover");
     testArcticContinuousSource(FailoverType.JM);
   }
 
   @Test
   public void testArcticContinuousSourceTaskManagerFailover() throws Exception {
+    LOG.info("testArcticContinuousSourceTaskManagerFailover");
     testArcticContinuousSource(FailoverType.TM);
   }
 
