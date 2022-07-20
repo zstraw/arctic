@@ -155,18 +155,21 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     });
     Assert.assertEquals(8, actualResult.size());
     assertArrayEquals(excepts(), actualResult);
+    LOG.info("testArcticSourceStatic end");
   }
 
   @Test(timeout = 120_000)
   public void testArcticSourceStaticJobManagerFailover() throws Exception {
     LOG.info("testArcticSourceStaticJobManagerFailover");
     testArcticSource(FailoverType.JM);
+    LOG.info("testArcticSourceStaticJobManagerFailover end");
   }
 
   @Test(timeout = 120_000)
   public void testArcticSourceStaticTaskManagerFailover() throws Exception {
     LOG.info("testArcticSourceStaticTaskManagerFailover");
     testArcticSource(FailoverType.TM);
+    LOG.info("testArcticSourceStaticTaskManagerFailover end");
   }
 
   public void testArcticSource(FailoverType failoverType) throws Exception {
@@ -252,7 +255,9 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     actualResult = collectRecordsFromUnboundedStream(clientAndIterator, excepts2().length);
 
     assertArrayEquals(excepts2(), actualResult);
+    LOG.info("testArcticContinuousSource cancel job");
     jobClient.cancel();
+    LOG.info("testArcticContinuousSource end");
   }
 
   @Test
@@ -281,18 +286,21 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
 
     assertArrayEquals(excepts2(), actualResult);
     jobClient.cancel();
+    LOG.info("testLatestStartupMode end");
   }
 
   @Test(timeout = 120_000)
   public void testArcticContinuousSourceJobManagerFailover() throws Exception {
     LOG.info("testArcticContinuousSourceJobManagerFailover");
     testArcticContinuousSource(FailoverType.JM);
+    LOG.info("testArcticContinuousSourceJobManagerFailover end");
   }
 
   @Test(timeout = 120_000)
   public void testArcticContinuousSourceTaskManagerFailover() throws Exception {
     LOG.info("testArcticContinuousSourceTaskManagerFailover");
     testArcticContinuousSource(FailoverType.TM);
+    LOG.info("testArcticContinuousSourceTaskManagerFailover end");
   }
 
   public void testArcticContinuousSource(final FailoverType failoverType) throws Exception {
@@ -353,6 +361,7 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     // because CI servers tend to be overloaded.
     assertRecords(testFailoverTable, expected, Duration.ofMillis(10), 12000);
     try {
+      LOG.info("cancel job");
       jobClient.cancel().get(5, TimeUnit.SECONDS);
     } catch (Exception e) {
       LOG.warn("job cancel error", e);
