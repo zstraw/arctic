@@ -12,24 +12,23 @@ public class TestRunListener extends RunListener {
 
   @Override
   public void testRunStarted(Description description) throws Exception {
-    LOGGER.info("testRunStarted " + description.getClassName() + " " + description.getDisplayName() + " "
-        + description);
+    LOGGER.info("------------------>>>>testRunStarted {} {} {}------------------------------", description.getClassName(),
+        description.getDisplayName(), description);
   }
 
+  @Override
   public void testStarted(Description description) throws Exception {
-    LOGGER.info("testStarted " + description.toString());
+    LOGGER.info("-------------->>>>testStarted {}", description);
   }
 
+  @Override
   public void testFinished(Description description) throws Exception {
-    LOGGER.info("testFinished " + description.toString());
+    LOGGER.info("-------------<<<<<testFinished {}", description);
   }
 
+  @Override
   public void testRunFinished(Result result) throws Exception {
-    LOGGER.info("testRunFinished " + result.toString()
-        + " time:" + result.getRunTime()
-        + " R" + result.getRunCount()
-        + " F" + result.getFailureCount()
-        + " I" + result.getIgnoreCount()
-    );
+    LOGGER.info("-----------------<<<<<testRunFinished {} time:{} R{} F{} I{}", result, result.getRunTime(),
+        result.getRunCount(), result.getFailureCount(), result.getIgnoreCount());
   }
 }
