@@ -58,14 +58,11 @@ import org.apache.flink.util.CloseableIterator;
 import org.apache.iceberg.flink.FlinkSchemaUtil;
 import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.io.Serializable;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -158,7 +155,6 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     LOG.info("testArcticSourceStatic end");
   }
 
-  @Ignore
   @Test(timeout = 120_000)
   public void testArcticSourceStaticJobManagerFailover() throws Exception {
     LOG.info("testArcticSourceStaticJobManagerFailover");
@@ -166,7 +162,6 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     LOG.info("testArcticSourceStaticJobManagerFailover end");
   }
 
-  @Ignore
   @Test(timeout = 120_000)
   public void testArcticSourceStaticTaskManagerFailover() throws Exception {
     LOG.info("testArcticSourceStaticTaskManagerFailover");
@@ -291,7 +286,6 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     LOG.info("testLatestStartupMode end");
   }
 
-  @Ignore
   @Test(timeout = 120_000)
   public void testArcticContinuousSourceJobManagerFailover() throws Exception {
     LOG.info("testArcticContinuousSourceJobManagerFailover");
@@ -299,7 +293,6 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     LOG.info("testArcticContinuousSourceJobManagerFailover end");
   }
 
-  @Ignore
   @Test(timeout = 120_000)
   public void testArcticContinuousSourceTaskManagerFailover() throws Exception {
     LOG.info("testArcticContinuousSourceTaskManagerFailover");
