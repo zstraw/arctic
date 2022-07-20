@@ -156,13 +156,13 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     assertArrayEquals(excepts(), actualResult);
   }
 
-  @Test
+  @Test(timeout = 120_000)
   public void testArcticSourceStaticJobManagerFailover() throws Exception {
     LOG.info("testArcticSourceStaticJobManagerFailover");
     testArcticSource(FailoverType.JM);
   }
 
-  @Test
+  @Test(timeout = 120_000)
   public void testArcticSourceStaticTaskManagerFailover() throws Exception {
     LOG.info("testArcticSourceStaticTaskManagerFailover");
     testArcticSource(FailoverType.TM);
@@ -282,13 +282,13 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     jobClient.cancel();
   }
 
-  @Test
+  @Test(timeout = 120_000)
   public void testArcticContinuousSourceJobManagerFailover() throws Exception {
     LOG.info("testArcticContinuousSourceJobManagerFailover");
     testArcticContinuousSource(FailoverType.JM);
   }
 
-  @Test
+  @Test(timeout = 120_000)
   public void testArcticContinuousSourceTaskManagerFailover() throws Exception {
     LOG.info("testArcticContinuousSourceTaskManagerFailover");
     testArcticContinuousSource(FailoverType.TM);
@@ -359,23 +359,26 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
       throws InterruptedException {
     for (int i = 0; i < maxCheckCount; ++i) {
       LOG.info("assertRecords for table:{}, i:{}", table, i);
-      if (equalsRecords(expected, tableRecords(table), table.schema())) {
+      if (equalsRecords(expected, tableRecords(table), false)) {
         break;
       } else {
         Thread.sleep(checkInterval.toMillis());
       }
     }
     // success or failure, assert on the latest table state
-    equalsRecords(expected, tableRecords(table), table.schema());
+    equalsRecords(expected, tableRecords(table), true);
   }
 
-  private boolean equalsRecords(List<RowData> expected, List<RowData> tableRecords, Schema schema) {
+  private boolean equalsRecords(List<RowData> expected, List<RowData> tableRecords, boolean throwException) {
     try {
       RowData[] expectedArray = sortRowDataCollection(expected);
       RowData[] actualArray = sortRowDataCollection(tableRecords);
       Assert.assertArrayEquals(expectedArray, actualArray);
       return true;
     } catch (Throwable e) {
+      if (throwException) {
+        throw e;
+      }
       return false;
     }
   }
@@ -395,6 +398,7 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     );
 
     List<RowData> actual = new ArrayList<>();
+    LOG.info("split size:{}", arcticSplits.size());
     arcticSplits.forEach(split -> {
       LOG.info("ArcticSplit {}.", split);
       DataIterator<RowData> dataIterator = rowDataReaderFunction.createDataIterator(split);
@@ -404,6 +408,7 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
         actual.add(rowData);
       }
     });
+    LOG.info("read all data:{}", actual);
     return actual;
   }
 
