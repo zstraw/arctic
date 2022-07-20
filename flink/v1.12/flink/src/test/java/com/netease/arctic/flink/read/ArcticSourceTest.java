@@ -75,6 +75,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.netease.arctic.ams.api.MockArcticMetastoreServer.TEST_CATALOG_NAME;
@@ -351,7 +352,11 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     // wait longer for continuous source to reduce flakiness
     // because CI servers tend to be overloaded.
     assertRecords(testFailoverTable, expected, Duration.ofMillis(10), 12000);
-    jobClient.cancel();
+    try {
+      jobClient.cancel().get(5, TimeUnit.SECONDS);
+    } catch (Exception e) {
+      LOG.warn("job cancel error", e);
+    }
   }
 
   private void assertRecords(
