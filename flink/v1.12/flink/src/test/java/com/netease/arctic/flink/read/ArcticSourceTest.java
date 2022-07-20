@@ -91,7 +91,7 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
   private static final int PARALLELISM = 4;
 
   @ClassRule
-  public final MiniClusterWithClientResource miniClusterResource =
+  public static final MiniClusterWithClientResource miniClusterResource =
       new MiniClusterWithClientResource(
           new MiniClusterResourceConfiguration.Builder()
               .setNumberTaskManagers(1)
@@ -105,8 +105,8 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
   protected static String perUtTableName;
   protected static TableIdentifier FAIL_TABLE_ID = null;
 
-  @Before
-  public void testSetup() throws IOException {
+  public void before() {
+    super.before();
     perUtTableName = sinkTableName + "_" + UUID.randomUUID();
     testCatalog = CatalogLoader.load(AMS.getUrl());
 
