@@ -28,7 +28,6 @@ import com.netease.arctic.flink.read.source.DataIterator;
 import com.netease.arctic.flink.table.ArcticTableLoader;
 import com.netease.arctic.flink.util.ArcticUtils;
 import com.netease.arctic.flink.write.FlinkSink;
-import com.netease.arctic.table.ArcticTable;
 import com.netease.arctic.table.KeyedTable;
 import com.netease.arctic.table.TableIdentifier;
 import com.netease.arctic.table.TableProperties;
@@ -283,13 +282,13 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     jobClient.cancel();
   }
 
-    @Test
+  @Test
   public void testArcticContinuousSourceJobManagerFailover() throws Exception {
     LOG.info("testArcticContinuousSourceJobManagerFailover");
     testArcticContinuousSource(FailoverType.JM);
   }
 
-    @Test
+  @Test
   public void testArcticContinuousSourceTaskManagerFailover() throws Exception {
     LOG.info("testArcticContinuousSourceTaskManagerFailover");
     testArcticContinuousSource(FailoverType.TM);
@@ -356,17 +355,18 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
   }
 
   private void assertRecords(
-      KeyedTable testFailoverTable, List<RowData> expected, Duration checkInterval, int maxCheckCount)
+      KeyedTable table, List<RowData> expected, Duration checkInterval, int maxCheckCount)
       throws InterruptedException {
     for (int i = 0; i < maxCheckCount; ++i) {
-      if (equalsRecords(expected, tableRecords(testFailoverTable), testFailoverTable.schema())) {
+      LOG.info("assertRecords for table:{}, i:{}", table, i);
+      if (equalsRecords(expected, tableRecords(table), table.schema())) {
         break;
       } else {
         Thread.sleep(checkInterval.toMillis());
       }
     }
     // success or failure, assert on the latest table state
-    equalsRecords(expected, tableRecords(testFailoverTable), testFailoverTable.schema());
+    equalsRecords(expected, tableRecords(table), table.schema());
   }
 
   private boolean equalsRecords(List<RowData> expected, List<RowData> tableRecords, Schema schema) {
