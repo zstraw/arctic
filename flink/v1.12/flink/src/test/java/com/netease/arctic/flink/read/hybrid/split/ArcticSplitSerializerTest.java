@@ -17,8 +17,11 @@
  */
 package com.netease.arctic.flink.read.hybrid.split;
 
+import com.netease.arctic.flink.FlinkTestBase;
 import com.netease.arctic.flink.read.FlinkSplitPlanner;
-import com.netease.arctic.flink.read.hybrid.reader.RowDataReaderFunctionTest;
+import com.netease.arctic.flink.table.ArcticTableLoader;
+import com.netease.arctic.flink.util.ArcticUtils;
+import com.netease.arctic.table.KeyedTable;
 import org.apache.flink.util.FlinkRuntimeException;
 import org.junit.Assert;
 import org.junit.Test;
@@ -28,11 +31,13 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-public class ArcticSplitSerializerTest extends RowDataReaderFunctionTest {
+public class ArcticSplitSerializerTest extends FlinkTestBase {
 
   @Test
   public void testSerAndDes() {
-    List<ArcticSplit> arcticSplits = FlinkSplitPlanner.planFullTable(testKeyedTable, new AtomicInteger(0));
+    ArcticTableLoader tableLoader = ArcticTableLoader.of(PK_TABLE_ID, catalogBuilder);
+    KeyedTable table = ArcticUtils.loadArcticTable(tableLoader).asKeyedTable();
+    List<ArcticSplit> arcticSplits = FlinkSplitPlanner.planFullTable(table, new AtomicInteger(0));
 
     ArcticSplitSerializer serializer = new ArcticSplitSerializer();
     List<byte[]> contents = arcticSplits.stream().map(split -> {
