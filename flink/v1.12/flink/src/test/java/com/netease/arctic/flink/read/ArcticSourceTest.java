@@ -136,12 +136,12 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     assertArrayEquals(excepts(), actualResult);
   }
 
-  @Test(timeout = 30000)
+  @Test(timeout = 60000)
   public void testArcticSourceStaticJobManagerFailover() throws Exception {
     testArcticSource(FailoverType.JM);
   }
 
-  @Test(timeout = 30000)
+  @Test(timeout = 60000)
   public void testArcticSourceStaticTaskManagerFailover() throws Exception {
     testArcticSource(FailoverType.TM);
   }
