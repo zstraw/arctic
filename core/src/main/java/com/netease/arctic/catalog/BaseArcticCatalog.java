@@ -514,7 +514,6 @@ public class BaseArcticCatalog implements ArcticCatalog {
     protected void createTableMeta(TableMeta meta) {
       boolean tableCreated = false;
       try {
-        LOG.info("createTableMeta");
         client.createTableMeta(meta);
         tableCreated = true;
       } catch (AlreadyExistsException e) {

@@ -24,6 +24,7 @@ import com.netease.arctic.ams.api.TableCommitMeta;
 import com.netease.arctic.ams.api.TableIdentifier;
 import com.netease.arctic.ams.api.TableMeta;
 import com.netease.arctic.ams.api.client.AmsClientPools;
+import com.netease.arctic.ams.api.client.ThriftClientPool;
 import org.apache.thrift.TException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,7 +43,10 @@ public class PooledAmsClient implements AmsClient {
   }
 
   private ArcticTableMetastore.Iface getIface() {
-    return AmsClientPools.getClientPool(metastoreUrl).iface();
+    LOG.info("getIface");
+    ThriftClientPool<ArcticTableMetastore.Client> pool = AmsClientPools.getClientPool(metastoreUrl);
+    LOG.info("get pool end, {}", pool.getClass());
+    return pool.iface();
   }
 
   @Override

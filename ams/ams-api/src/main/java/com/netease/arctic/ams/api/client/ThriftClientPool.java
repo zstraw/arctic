@@ -226,6 +226,7 @@ public class ThriftClientPool<T extends org.apache.thrift.TServiceClient> {
    */
   @SuppressWarnings("unchecked")
   public <X> X iface() {
+    LOG.info("pool iface");
     ThriftClient<T> client = null;
     int attempt;
     for (attempt = 0; attempt < retries; ++attempt) {
