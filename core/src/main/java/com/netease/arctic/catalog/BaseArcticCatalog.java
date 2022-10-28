@@ -427,10 +427,14 @@ public class BaseArcticCatalog implements ArcticCatalog {
 
     @Override
     public ArcticTable create() {
+      LOG.info("create");
       doCreateCheck();
+      LOG.info("check end");
       ConvertStructUtil.TableMetaBuilder builder = createTableMataBuilder();
       TableMeta meta = builder.build();
+      LOG.info("doCreateTable");
       ArcticTable table = doCreateTable(meta);
+      LOG.info("createTableMeta");
       createTableMeta(meta);
       return table;
     }
