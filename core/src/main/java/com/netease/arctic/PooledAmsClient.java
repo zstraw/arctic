@@ -25,6 +25,8 @@ import com.netease.arctic.ams.api.TableIdentifier;
 import com.netease.arctic.ams.api.TableMeta;
 import com.netease.arctic.ams.api.client.AmsClientPools;
 import org.apache.thrift.TException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
@@ -33,6 +35,7 @@ import java.util.List;
  */
 public class PooledAmsClient implements AmsClient {
   private final String metastoreUrl;
+  public static final Logger LOG = LoggerFactory.getLogger(PooledAmsClient.class);
 
   public PooledAmsClient(String metastoreUrl) {
     this.metastoreUrl = metastoreUrl;
@@ -77,7 +80,9 @@ public class PooledAmsClient implements AmsClient {
   @Override
   public void createTableMeta(TableMeta tableMeta)
       throws TException {
+    LOG.info("createTableMeta in client");
     getIface().createTableMeta(tableMeta);
+    LOG.info("createTableMeta end");
   }
 
   @Override
