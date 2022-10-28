@@ -231,6 +231,9 @@ public class ThriftClientPool<T extends org.apache.thrift.TServiceClient> {
     for (attempt = 0; attempt < retries; ++attempt) {
       try {
         LOG.info("pool.borrowObject");
+        LOG.info("wait:{}, active num:{}, borrow:{}, created:{}, return:{}, idle:{}",
+            pool.getNumWaiters(), pool.getNumActive(), pool.getBorrowedCount(), pool.getCreatedCount(),
+            pool.getReturnedCount(), pool.getNumIdle());
         client = pool.borrowObject();
         LOG.info("pool.borrowObject end");
         if (client.isDisConnected() || !pingFactory.ping(client.iface())) {
