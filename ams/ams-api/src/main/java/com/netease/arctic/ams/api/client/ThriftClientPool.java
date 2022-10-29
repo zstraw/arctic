@@ -225,7 +225,7 @@ public class ThriftClientPool<T extends org.apache.thrift.TServiceClient> {
    * @throws IllegalStateException     if call method on return object twice
    */
   @SuppressWarnings("unchecked")
-  public <X> X iface() {
+  public synchronized <X> X iface() {
     LOG.info("pool iface");
     ThriftClient<T> client = null;
     int attempt;
