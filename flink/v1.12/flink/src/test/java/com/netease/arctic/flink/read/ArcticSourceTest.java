@@ -18,7 +18,6 @@
 
 package com.netease.arctic.flink.read;
 
-import com.netease.arctic.catalog.CatalogLoader;
 import com.netease.arctic.flink.read.hybrid.reader.ReaderFunction;
 import com.netease.arctic.flink.read.hybrid.reader.RowDataReaderFunction;
 import com.netease.arctic.flink.read.hybrid.reader.RowDataReaderFunctionTest;
@@ -66,15 +65,12 @@ import org.apache.iceberg.flink.FlinkSchemaUtil;
 import org.apache.iceberg.io.TaskWriter;
 import org.apache.iceberg.types.TypeUtil;
 import org.apache.iceberg.types.Types;
-import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.io.Serializable;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -107,10 +103,6 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
               .setRpcServiceSharing(RpcServiceSharing.DEDICATED)
               .withHaLeadershipControl()
               .build());
-
-  protected static final String sinkTableName = "test_sink_exactly_once";
-  protected static final TableIdentifier FAIL_TABLE_ID =
-      TableIdentifier.of(TEST_CATALOG_NAME, TEST_DB_NAME, sinkTableName);
 
   @Test(timeout = 30000)
   public void testArcticSourceStatic() throws Exception {
@@ -173,7 +165,7 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     FlinkSink
         .forRowData(streamFailingInTheMiddleOfReading)
         .table(testKeyedTable)
-        .tableLoader(ArcticTableLoader.of(FAIL_TABLE_ID, catalogBuilder))
+        .tableLoader(ArcticTableLoader.of(PK_TABLE_ID, catalogBuilder))
         .flinkSchema(FLINK_SCHEMA)
         .build();
 
@@ -356,7 +348,7 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     FlinkSink
         .forRowData(input)
         .table(testKeyedTable)
-        .tableLoader(ArcticTableLoader.of(FAIL_TABLE_ID, catalogBuilder))
+        .tableLoader(ArcticTableLoader.of(PK_TABLE_ID, catalogBuilder))
         .flinkSchema(FLINK_SCHEMA)
         .build();
 
