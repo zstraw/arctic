@@ -44,7 +44,7 @@ public class ThriftClientPool<T extends org.apache.thrift.TServiceClient> {
 
   private final ThriftPingFactory pingFactory;
 
-  private final GenericObjectPool<ThriftClient<T>> pool;
+  public final GenericObjectPool<ThriftClient<T>> pool;
 
   private String url;
 
