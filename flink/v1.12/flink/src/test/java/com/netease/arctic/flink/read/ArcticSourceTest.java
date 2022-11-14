@@ -109,36 +109,7 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
               .withHaLeadershipControl()
               .build());
 
-  protected KeyedTable testFailoverTable;
-  protected static final String sinkTableName = "test_sink_exactly_once";
-  protected static final TableIdentifier FAIL_TABLE_ID =
-      TableIdentifier.of(TEST_CATALOG_NAME, TEST_DB_NAME, sinkTableName);
-
-  @Before
-  public void testSetup() throws IOException {
-    testCatalog = CatalogLoader.load(AMS.getUrl());
-
-    String db = FAIL_TABLE_ID.getDatabase();
-    if (!testCatalog.listDatabases().contains(db)) {
-      testCatalog.createDatabase(db);
-    }
-
-    if (!testCatalog.tableExists(FAIL_TABLE_ID)) {
-      testFailoverTable = testCatalog
-          .newTableBuilder(FAIL_TABLE_ID, TABLE_SCHEMA)
-          .withProperty(TableProperties.LOCATION, tableDir.getPath() + "/" + sinkTableName)
-          .withPartitionSpec(SPEC)
-          .withPrimaryKeySpec(PRIMARY_KEY_SPEC)
-          .create().asKeyedTable();
-    }
-  }
-
-  @After
-  public void dropTable() {
-    testCatalog.dropTable(FAIL_TABLE_ID, true);
-  }
-
-  @Test
+  @Test(timeout = 30000)
   public void testArcticSourceStatic() throws Exception {
     ArcticSource<RowData> arcticSource = initArcticSource(false);
 
@@ -162,14 +133,12 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     assertArrayEquals(excepts(), actualResult);
   }
 
-  @Ignore
-  @Test
+  @Test(timeout = 60000)
   public void testArcticSourceStaticJobManagerFailover() throws Exception {
     testArcticSource(FailoverType.JM);
   }
 
-  @Ignore
-  @Test
+  @Test(timeout = 60000)
   public void testArcticSourceStaticTaskManagerFailover() throws Exception {
     testArcticSource(FailoverType.TM);
   }
@@ -200,8 +169,8 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
 
     FlinkSink
         .forRowData(streamFailingInTheMiddleOfReading)
-        .table(testFailoverTable)
-        .tableLoader(ArcticTableLoader.of(FAIL_TABLE_ID, catalogBuilder))
+        .table(testKeyedTable)
+        .tableLoader(ArcticTableLoader.of(PK_TABLE_ID, catalogBuilder))
         .flinkSchema(FLINK_SCHEMA)
         .build();
 
@@ -215,7 +184,7 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
         RecordCounterToFail::continueProcessing,
         miniClusterResource.getMiniCluster());
 
-    assertRecords(testFailoverTable, expected, Duration.ofMillis(10), 12000);
+    assertRecords(testKeyedTable, expected, Duration.ofMillis(10), 12000);
   }
 
   @Test(timeout = 30000)
@@ -256,7 +225,7 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     Assert.assertEquals(Long.MAX_VALUE, WatermarkAwareFailWrapper.getWatermarkAfterFailover());
   }
 
-  @Test
+  @Test(timeout = 30000)
   public void testArcticContinuousSource() throws Exception {
     ArcticSource<RowData> arcticSource = initArcticSource(true);
     StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
@@ -354,14 +323,12 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     jobClient.cancel();
   }
 
-  @Ignore
-  @Test
+  @Test(timeout = 60000)
   public void testArcticContinuousSourceJobManagerFailover() throws Exception {
     testArcticContinuousSource(FailoverType.JM);
   }
 
-  @Ignore
-  @Test
+  @Test(timeout = 60000)
   public void testArcticContinuousSourceTaskManagerFailover() throws Exception {
     testArcticContinuousSource(FailoverType.TM);
   }
@@ -385,8 +352,8 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
 
     FlinkSink
         .forRowData(input)
-        .table(testFailoverTable)
-        .tableLoader(ArcticTableLoader.of(FAIL_TABLE_ID, catalogBuilder))
+        .table(testKeyedTable)
+        .tableLoader(ArcticTableLoader.of(PK_TABLE_ID, catalogBuilder))
         .flinkSchema(FLINK_SCHEMA)
         .build();
 
@@ -406,7 +373,7 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
 
     // wait longer for continuous source to reduce flakiness
     // because CI servers tend to be overloaded.
-    assertRecords(testFailoverTable, expected, Duration.ofMillis(10), 12000);
+    assertRecords(testKeyedTable, expected, Duration.ofMillis(10), 12000);
     jobClient.cancel();
   }
 

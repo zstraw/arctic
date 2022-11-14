@@ -126,13 +126,13 @@ public class FlinkTestBase extends TableTestBase {
           .withProperty(TableProperties.LOCATION, tableDir.getPath() + "/pk_no_partition_table")
           .withPrimaryKeySpec(PRIMARY_KEY_SPEC)
           .create().asKeyedTable();
-
+      LOG.info("create table e");
       testPartitionTable = testCatalog
           .newTableBuilder(PARTITION_TABLE_ID, TABLE_SCHEMA)
           .withProperty(TableProperties.LOCATION, tableDir.getPath() + "/partition_table")
           .withPartitionSpec(SPEC)
           .create().asUnkeyedTable();
-
+      LOG.info("create table f");
       catalogBuilder = InternalCatalogBuilder.builder().metastoreUrl(metastoreUrl + "/" + TEST_CATALOG_NAME);
     } else {
       metastoreUrl = METASTORE_URL;

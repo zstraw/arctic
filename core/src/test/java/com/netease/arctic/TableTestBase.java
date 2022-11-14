@@ -138,26 +138,26 @@ public class TableTestBase {
     if (!testCatalog.listDatabases().contains(db)) {
       testCatalog.createDatabase(db);
     }
-
+    LOG.info("create table a");
     testTable = testCatalog
         .newTableBuilder(TABLE_ID, TABLE_SCHEMA)
         .withProperty(TableProperties.LOCATION, tableDir.getPath() + "/table")
         .withPartitionSpec(SPEC)
         .create().asUnkeyedTable();
-
+    LOG.info("create table b");
     testKeyedTable = testCatalog
         .newTableBuilder(PK_TABLE_ID, TABLE_SCHEMA)
         .withProperty(TableProperties.LOCATION, tableDir.getPath() + "/pk_table")
         .withPartitionSpec(SPEC)
         .withPrimaryKeySpec(PRIMARY_KEY_SPEC)
         .create().asKeyedTable();
-
+    LOG.info("create table c");
     testNoPartitionTable = testCatalog
         .newTableBuilder(NO_PARTITION_TABLE_ID, TABLE_SCHEMA)
         .withProperty(TableProperties.LOCATION, tableDir.getPath() + "/no_partition_table")
         .withPrimaryKeySpec(PRIMARY_KEY_SPEC)
         .create().asKeyedTable();
-
+    LOG.info("create table d");
     this.before();
     LOG.info("setupTables end");
   }

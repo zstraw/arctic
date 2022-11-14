@@ -24,7 +24,12 @@ import com.netease.arctic.ams.api.TableCommitMeta;
 import com.netease.arctic.ams.api.TableIdentifier;
 import com.netease.arctic.ams.api.TableMeta;
 import com.netease.arctic.ams.api.client.AmsClientPools;
+import com.netease.arctic.ams.api.client.ThriftClient;
+import com.netease.arctic.ams.api.client.ThriftClientPool;
+import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.apache.thrift.TException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
@@ -33,13 +38,20 @@ import java.util.List;
  */
 public class PooledAmsClient implements AmsClient {
   private final String metastoreUrl;
+  public static final Logger LOG = LoggerFactory.getLogger(PooledAmsClient.class);
 
   public PooledAmsClient(String metastoreUrl) {
     this.metastoreUrl = metastoreUrl;
   }
 
   private ArcticTableMetastore.Iface getIface() {
-    return AmsClientPools.getClientPool(metastoreUrl).iface();
+    LOG.info("getIface");
+    ThriftClientPool<ArcticTableMetastore.Client> pool = AmsClientPools.getClientPool(metastoreUrl);
+    LOG.info("get pool end, {}", pool.getClass());
+    LOG.info("wait:{}, active num:{}, borrow:{}, created:{}, return:{}, idle:{}",
+        pool.pool.getNumWaiters(), pool.pool.getNumActive(), pool.pool.getBorrowedCount(), pool.pool.getCreatedCount(),
+        pool.pool.getReturnedCount(), pool.pool.getNumIdle());
+    return pool.iface();
   }
 
   @Override
@@ -77,7 +89,9 @@ public class PooledAmsClient implements AmsClient {
   @Override
   public void createTableMeta(TableMeta tableMeta)
       throws TException {
+    LOG.info("createTableMeta in client");
     getIface().createTableMeta(tableMeta);
+    LOG.info("createTableMeta end");
   }
 
   @Override

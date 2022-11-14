@@ -19,6 +19,7 @@
 package com.netease.arctic.flink.write;
 
 import com.netease.arctic.flink.FlinkTestBase;
+import com.netease.arctic.flink.metric.MetricsGenerator;
 import com.netease.arctic.flink.table.ArcticTableLoader;
 import com.netease.arctic.table.ArcticTable;
 import org.apache.flink.streaming.util.OneInputStreamOperatorTestHarness;
@@ -31,7 +32,6 @@ import org.apache.iceberg.Table;
 import org.apache.iceberg.flink.sink.RowDataTaskWriterFactory;
 import org.apache.iceberg.flink.sink.TaskWriterFactory;
 import org.apache.iceberg.io.TaskWriter;
-import org.apache.iceberg.io.WriteResult;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -75,11 +75,13 @@ public class ArcticFileWriterTest extends FlinkTestBase {
         null,
         false,
         (RowType) FLINK_SCHEMA.toRowDataType().getLogicalType(),
-
         tableLoader);
+
+    ArcticWriter arcticWriter = new ArcticWriter(null, streamWriter, tableLoader,
+        MetricsGenerator.empty(false));
     OneInputStreamOperatorTestHarness<RowData, WriteResult> harness =
         new OneInputStreamOperatorTestHarness<>(
-            streamWriter, 1, 1, 0);
+            arcticWriter, 1, 1, 0);
 
     harness.setup();
     harness.open();
@@ -102,15 +104,12 @@ public class ArcticFileWriterTest extends FlinkTestBase {
     try (
         OneInputStreamOperatorTestHarness<RowData, WriteResult> testHarness = createArcticStreamWriter(
             tableLoader)) {
-      ArcticFileWriter fileWriter = (ArcticFileWriter) testHarness.getOneInputOperator();
-      Assert.assertNotNull(fileWriter.getWriter());
       // The first checkpoint
       testHarness.processElement(createRowData(1, "hello", "2020-10-11T10:10:11.0"), 1);
       testHarness.processElement(createRowData(2, "hello", "2020-10-12T10:10:11.0"), 1);
       testHarness.processElement(createRowData(3, "hello", "2020-10-13T10:10:11.0"), 1);
 
       testHarness.prepareSnapshotPreBarrier(checkpointId);
-      Assert.assertNull(fileWriter.getWriter());
       Assert.assertEquals(1, testHarness.extractOutputValues().size());
       Assert.assertEquals(3, testHarness.extractOutputValues().get(0).dataFiles().length);
 
@@ -118,7 +117,6 @@ public class ArcticFileWriterTest extends FlinkTestBase {
 
       // The second checkpoint
       testHarness.processElement(createRowData(1, "hello", "2020-10-12T10:10:11.0"), 1);
-      Assert.assertNotNull(fileWriter.getWriter());
       testHarness.processElement(createRowData(2, "hello", "2020-10-12T10:10:11.0"), 1);
       testHarness.processElement(createRowData(3, "hello", "2020-10-12T10:10:11.0"), 1);
 
@@ -277,7 +275,7 @@ public class ArcticFileWriterTest extends FlinkTestBase {
 
       // The second checkpoint
       testHarness.prepareSnapshotPreBarrier(checkpointId);
-      Assert.assertEquals(excepted, testHarness.extractOutputValues().size());
+      Assert.assertEquals(excepted + (submitEmptySnapshots ? 1 : 0), testHarness.extractOutputValues().size());
     }
   }
 

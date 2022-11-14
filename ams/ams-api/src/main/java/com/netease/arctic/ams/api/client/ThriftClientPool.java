@@ -44,7 +44,7 @@ public class ThriftClientPool<T extends org.apache.thrift.TServiceClient> {
 
   private final ThriftPingFactory pingFactory;
 
-  private final GenericObjectPool<ThriftClient<T>> pool;
+  public final GenericObjectPool<ThriftClient<T>> pool;
 
   private String url;
 
@@ -225,12 +225,18 @@ public class ThriftClientPool<T extends org.apache.thrift.TServiceClient> {
    * @throws IllegalStateException     if call method on return object twice
    */
   @SuppressWarnings("unchecked")
-  public <X> X iface() {
+  public synchronized <X> X iface() {
+    LOG.info("pool iface");
     ThriftClient<T> client = null;
     int attempt;
     for (attempt = 0; attempt < retries; ++attempt) {
       try {
+        LOG.info("pool.borrowObject");
+        LOG.info("wait:{}, active num:{}, borrow:{}, created:{}, return:{}, idle:{}",
+            pool.getNumWaiters(), pool.getNumActive(), pool.getBorrowedCount(), pool.getCreatedCount(),
+            pool.getReturnedCount(), pool.getNumIdle());
         client = pool.borrowObject();
+        LOG.info("pool.borrowObject end");
         if (client.isDisConnected() || !pingFactory.ping(client.iface())) {
           if (attempt > 1) {
             // if attempt > 1, it means the server is maybe restarting, so we should wait a while
