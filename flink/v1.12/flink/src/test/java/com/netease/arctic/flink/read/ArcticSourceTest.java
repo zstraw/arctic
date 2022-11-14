@@ -63,9 +63,8 @@ import org.apache.flink.util.CloseableIterator;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.flink.FlinkSchemaUtil;
 import org.apache.iceberg.io.TaskWriter;
-import org.apache.iceberg.types.TypeUtil;
-import org.apache.iceberg.types.Types;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -101,6 +100,15 @@ public class ArcticSourceTest extends ContinuousSplitPlannerImplTest implements 
   private static final long serialVersionUID = 7418812854449034756L;
   private static final int PARALLELISM = 4;
 
+  @BeforeClass
+  public static void beforeClass() {
+    try {
+      MINI_CLUSTER_RESOURCE.getMiniCluster().close();
+    } catch (Exception e) {
+      LOG.info("close mini cluster in base exception.", e);
+    }
+  }
+  
   @Rule
   public final MiniClusterWithClientResource miniClusterResource =
       new MiniClusterWithClientResource(
@@ -135,12 +143,12 @@ public class ArcticSourceTest extends ContinuousSplitPlannerImplTest implements 
     assertArrayEquals(excepts(), actualResult);
   }
 
-  @Test(timeout = 30000)
+  @Test
   public void testArcticSourceStaticJobManagerFailover() throws Exception {
     testArcticSource(FailoverType.JM);
   }
 
-  @Test(timeout = 30000)
+  @Test
   public void testArcticSourceStaticTaskManagerFailover() throws Exception {
     testArcticSource(FailoverType.TM);
   }
@@ -188,45 +196,7 @@ public class ArcticSourceTest extends ContinuousSplitPlannerImplTest implements 
 
     assertRecords(testKeyedTable, expected, Duration.ofMillis(10), 12000);
   }
-
-  @Test(timeout = 30000)
-  public void testDimTaskManagerFailover() throws Exception {
-    List<RowData> updated = updateRecords();
-    writeUpdate(updated);
-    List<RowData> records = generateRecords(2, 1);
-    writeUpdate(records);
-
-    ArcticSource<RowData> arcticSource = initArcticDimSource(true);
-    StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-    // enable checkpoint
-    env.enableCheckpointing(1000);
-    env.setRestartStrategy(RestartStrategies.fixedDelayRestart(10, 0));
-
-    DataStream<RowData> input = env.fromSource(
-            arcticSource,
-            WatermarkStrategy.noWatermarks(),
-            "ArcticParallelSource")
-        .setParallelism(PARALLELISM);
-
-    WatermarkAwareFailWrapper.wrapWithFailureAfter(input);
-
-    JobClient jobClient = env.executeAsync("Dim Arctic Source Failover Test");
-    JobID jobId = jobClient.getJobID();
-
-    WatermarkAwareFailWrapper.waitToFail();
-    triggerFailover(
-        FailoverType.TM,
-        jobId,
-        WatermarkAwareFailWrapper::continueProcessing,
-        miniClusterResource.getMiniCluster());
-
-    while (WatermarkAwareFailWrapper.watermarkCounter.get() != PARALLELISM) {
-      Thread.sleep(1000);
-      LOG.info("wait for watermark after failover");
-    }
-    Assert.assertEquals(Long.MAX_VALUE, WatermarkAwareFailWrapper.getWatermarkAfterFailover());
-  }
-
+  
   @Test(timeout = 30000)
   public void testArcticContinuousSource() throws Exception {
     ArcticSource<RowData> arcticSource = initArcticSource(true);
@@ -431,7 +401,7 @@ public class ArcticSourceTest extends ContinuousSplitPlannerImplTest implements 
     return actual;
   }
 
-  private List<RowData> generateRecords(int numRecords, int index) {
+  public static List<RowData> generateRecords(int numRecords, int index) {
     int pk = 100;
     List<RowData> records = new ArrayList<>(numRecords);
     for (int i = index; i < numRecords + index; i++) {
@@ -447,13 +417,13 @@ public class ArcticSourceTest extends ContinuousSplitPlannerImplTest implements 
   //  test utilities
   // ------------------------------------------------------------------------
 
-  private enum FailoverType {
+  public enum FailoverType {
     NONE,
     TM,
     JM
   }
 
-  private static void triggerFailover(
+  public static void triggerFailover(
       FailoverType type, JobID jobId, Runnable afterFailAction, MiniCluster miniCluster)
       throws Exception {
     switch (type) {
@@ -566,29 +536,11 @@ public class ArcticSourceTest extends ContinuousSplitPlannerImplTest implements 
         false);
   }
 
-  private ArcticSource<RowData> initArcticDimSource(boolean isStreaming) {
-    ArcticTableLoader tableLoader = initLoader();
-    ArcticScanContext arcticScanContext = initArcticScanContext(isStreaming, SCAN_STARTUP_MODE_EARLIEST);
-    ReaderFunction<RowData> rowDataReaderFunction = initRowDataReadFunction();
-    Schema schema = testKeyedTable.schema();
-    Schema schemaWithWm = TypeUtil.join(schema,
-        new Schema(Types.NestedField.of(-1, true, "opt", Types.TimestampType.withoutZone())));
-    TypeInformation<RowData> typeInformation = InternalTypeInfo.of(FlinkSchemaUtil.convert(schemaWithWm));
-
-    return new ArcticSource<>(
-        tableLoader,
-        arcticScanContext,
-        rowDataReaderFunction,
-        typeInformation,
-        testKeyedTable.name(),
-        true);
-  }
-
   private RowDataReaderFunction initRowDataReadFunction() {
     return initRowDataReadFunction(testKeyedTable);
   }
 
-  private RowDataReaderFunction initRowDataReadFunction(KeyedTable keyedTable) {
+  public static RowDataReaderFunction initRowDataReadFunction(KeyedTable keyedTable) {
     return new RowDataReaderFunction(
         new Configuration(),
         keyedTable.schema(),
@@ -600,7 +552,7 @@ public class ArcticSourceTest extends ContinuousSplitPlannerImplTest implements 
     );
   }
 
-  private ArcticScanContext initArcticScanContext(boolean isStreaming, String scanStartupMode) {
+  public static ArcticScanContext initArcticScanContext(boolean isStreaming, String scanStartupMode) {
     return ArcticScanContext.arcticBuilder().streaming(isStreaming).scanStartupMode(scanStartupMode)
         .monitorInterval(Duration.ofMillis(500)).build();
   }
@@ -645,82 +597,6 @@ public class ArcticSourceTest extends ContinuousSplitPlannerImplTest implements 
     }
   }
 
-  private static class WatermarkAwareFailWrapper {
-
-    private static WatermarkFailoverTestOperator op;
-    private static long watermarkAfterFailover = -1;
-    private static AtomicInteger watermarkCounter = new AtomicInteger(0);
-
-    public static long getWatermarkAfterFailover() {
-      return watermarkAfterFailover;
-    }
-
-    private static DataStream<RowData> wrapWithFailureAfter(DataStream<RowData> stream) {
-      op = new WatermarkFailoverTestOperator();
-      return stream.transform("watermark failover", TypeInformation.of(RowData.class), op);
-    }
-
-    private static void waitToFail() throws ExecutionException, InterruptedException {
-      op.waitToFail();
-    }
-
-    private static void continueProcessing() {
-      op.continueProcessing();
-    }
-
-    static class WatermarkFailoverTestOperator extends AbstractStreamOperator<RowData>
-        implements OneInputStreamOperator<RowData, RowData> {
-
-      private static final long serialVersionUID = 1L;
-      private static boolean fail = false;
-      private static boolean failoverHappened = false;
-
-      public WatermarkFailoverTestOperator() {
-        super();
-        chainingStrategy = ChainingStrategy.ALWAYS;
-      }
-
-      private void waitToFail() throws InterruptedException {
-        while (!fail) {
-          LOG.info("Waiting to fail");
-          Thread.sleep(1000);
-        }
-      }
-
-      private void continueProcessing() {
-        failoverHappened = true;
-        LOG.info("failover happened");
-      }
-
-      @Override
-      public void open() throws Exception {
-        super.open();
-      }
-
-      @Override
-      public void processElement(StreamRecord<RowData> element) throws Exception {
-        output.collect(element);
-      }
-
-      @Override
-      public void processWatermark(Watermark mark) throws Exception {
-        LOG.info("processWatermark: {}", mark);
-        if (!failoverHappened && mark.getTimestamp() > 0) {
-          fail = true;
-        }
-        if (failoverHappened) {
-          LOG.info("failover happened, watermark: {}", mark);
-          Assert.assertEquals(Long.MAX_VALUE, mark.getTimestamp());
-          if (watermarkAfterFailover == -1) {
-            watermarkAfterFailover = mark.getTimestamp();
-          } else {
-            watermarkAfterFailover = Math.min(watermarkAfterFailover, mark.getTimestamp());
-          }
-          watermarkCounter.incrementAndGet();
-        }
-        super.processWatermark(mark);
-      }
-    }
-  }
+  
 
 }

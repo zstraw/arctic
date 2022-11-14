@@ -28,6 +28,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.netease.arctic.flink.read.hybrid.reader.RowDataReaderFunctionTest.writeUpdate;
+
 public class FlinkSplitPlannerTest extends ContinuousSplitPlannerImplTest {
 
   @Test
