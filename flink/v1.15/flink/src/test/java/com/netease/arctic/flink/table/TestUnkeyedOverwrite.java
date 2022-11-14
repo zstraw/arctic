@@ -58,7 +58,7 @@ public class TestUnkeyedOverwrite extends FlinkTestBase {
   @ClassRule
   public static final MiniClusterWithClientResource MINI_CLUSTER_RESOURCE =
       MiniClusterResource.createWithClassloaderCheckDisabled();
-
+  
   private static final String TABLE = "test_unkeyed";
   private static final String DB = TABLE_ID.getDatabase();
 
@@ -106,7 +106,7 @@ public class TestUnkeyedOverwrite extends FlinkTestBase {
     }
   }
 
-  @Test
+  @Test(timeout = 30000)
   public void testInsertOverwrite() throws IOException {
     List<Object[]> data = new LinkedList<>();
     data.add(new Object[]{1000004, "a"});

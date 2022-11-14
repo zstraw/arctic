@@ -303,6 +303,7 @@ public class TableMetaStore implements Serializable {
       try {
         return callable.call();
       } catch (Throwable e) {
+        LOG.error("run with process ugi request failed.", e);
         if (e instanceof RuntimeException) {
           throw (RuntimeException) e;
         }
@@ -314,6 +315,7 @@ public class TableMetaStore implements Serializable {
       try {
         return callable.call();
       } catch (Throwable e) {
+        LOG.error("run with catalog ugi request failed. UGI is {}", getUGI(), e);
         if (e instanceof RuntimeException) {
           throw (RuntimeException) e;
         }
@@ -381,6 +383,9 @@ public class TableMetaStore implements Serializable {
     Configuration configuration = new Configuration();
     configuration.addResource(new ByteArrayInputStream(metaStore.getCoreSite()));
     configuration.addResource(new ByteArrayInputStream(metaStore.getHdfsSite()));
+    if (!ArrayUtils.isEmpty(metaStore.getMetaStoreSite())) {
+      configuration.addResource(new ByteArrayInputStream(metaStore.getMetaStoreSite()));
+    }
     configuration.set(CommonConfigurationKeys.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY, "true");
     //Enforce configuration resolve resources
     configuration.get(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY);
