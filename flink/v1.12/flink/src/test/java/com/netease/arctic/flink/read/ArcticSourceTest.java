@@ -65,6 +65,7 @@ import org.apache.iceberg.flink.FlinkSchemaUtil;
 import org.apache.iceberg.io.TaskWriter;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -109,8 +110,8 @@ public class ArcticSourceTest extends ContinuousSplitPlannerImplTest implements 
     }
   }
   
-  @Rule
-  public final MiniClusterWithClientResource miniClusterResource =
+  @ClassRule
+  public static final MiniClusterWithClientResource miniClusterResource =
       new MiniClusterWithClientResource(
           new MiniClusterResourceConfiguration.Builder()
               .setNumberTaskManagers(1)
