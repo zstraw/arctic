@@ -18,7 +18,7 @@
 
 package com.netease.arctic.flink.read;
 
-import com.netease.arctic.flink.read.hybrid.reader.RowDataReaderFunctionTest;
+import com.netease.arctic.flink.read.hybrid.enumerator.ContinuousSplitPlannerImplTest;
 import com.netease.arctic.flink.read.hybrid.split.ArcticSplit;
 import org.apache.iceberg.TableScan;
 import org.junit.Assert;
@@ -28,7 +28,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class FlinkSplitPlannerTest extends RowDataReaderFunctionTest {
+public class FlinkSplitPlannerTest extends ContinuousSplitPlannerImplTest {
 
   @Test
   public void testPlanSplitFromKeyedTable() {

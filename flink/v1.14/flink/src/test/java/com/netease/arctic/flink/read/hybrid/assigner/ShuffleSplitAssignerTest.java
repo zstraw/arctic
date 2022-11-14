@@ -29,6 +29,10 @@ import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
+
+import com.netease.arctic.flink.table.ArcticTableLoader;
+import com.netease.arctic.flink.util.ArcticUtils;
+import com.netease.arctic.table.KeyedTable;
 import org.apache.flink.api.connector.source.ReaderInfo;
 import org.apache.flink.api.connector.source.SourceEvent;
 import org.apache.flink.api.connector.source.SplitEnumeratorContext;
@@ -46,7 +50,9 @@ public class ShuffleSplitAssignerTest extends RowDataReaderFunctionTest {
   public void testSingleParallelism() {
     ShuffleSplitAssigner shuffleSplitAssigner = instanceSplitAssigner(1);
 
-    List<ArcticSplit> splitList = FlinkSplitPlanner.planFullTable(testKeyedTable, new AtomicInteger());
+    ArcticTableLoader tableLoader = ArcticTableLoader.of(PK_TABLE_ID, catalogBuilder);
+    KeyedTable table = ArcticUtils.loadArcticTable(tableLoader).asKeyedTable();
+    List<ArcticSplit> splitList = FlinkSplitPlanner.planFullTable(table, new AtomicInteger());
     shuffleSplitAssigner.onDiscoveredSplits(splitList);
     List<ArcticSplit> actual = new ArrayList<>();
 
@@ -66,7 +72,9 @@ public class ShuffleSplitAssignerTest extends RowDataReaderFunctionTest {
   public void testMultiParallelism() {
     ShuffleSplitAssigner shuffleSplitAssigner = instanceSplitAssigner(3);
 
-    List<ArcticSplit> splitList = FlinkSplitPlanner.planFullTable(testKeyedTable, new AtomicInteger());
+    ArcticTableLoader tableLoader = ArcticTableLoader.of(PK_TABLE_ID, catalogBuilder);
+    KeyedTable table = ArcticUtils.loadArcticTable(tableLoader).asKeyedTable();
+    List<ArcticSplit> splitList = FlinkSplitPlanner.planFullTable(table, new AtomicInteger());
     shuffleSplitAssigner.onDiscoveredSplits(splitList);
     List<ArcticSplit> actual = new ArrayList<>();
 
