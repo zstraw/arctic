@@ -141,7 +141,8 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
   public void testArcticSourceStatic() throws Exception {
     ArcticSource<RowData> arcticSource = initArcticSource(false);
 
-    StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+    StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(
+        miniClusterResource.getClientConfiguration());
     // enable checkpoint
     env.enableCheckpointing(3000);
     // set the source parallelism to 4
@@ -181,7 +182,8 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     expected.addAll(records);
 
     ArcticSource<RowData> arcticSource = initArcticSource(false);
-    StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+    StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(
+        miniClusterResource.getClientConfiguration());
     // enable checkpoint
     env.enableCheckpointing(1000);
     env.setRestartStrategy(RestartStrategies.fixedDelayRestart(1, 0));
@@ -223,7 +225,8 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     writeUpdate(records);
 
     ArcticSource<RowData> arcticSource = initArcticDimSource(true);
-    StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+    StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(
+        miniClusterResource.getClientConfiguration());
     // enable checkpoint
     env.enableCheckpointing(1000);
     env.setRestartStrategy(RestartStrategies.fixedDelayRestart(10, 0));
@@ -256,7 +259,8 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
   @Test(timeout = 30000)
   public void testArcticContinuousSource() throws Exception {
     ArcticSource<RowData> arcticSource = initArcticSource(true);
-    StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+    StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(
+        miniClusterResource.getClientConfiguration());
     // enable checkpoint
     env.enableCheckpointing(1000);
     ClientAndIterator<RowData> clientAndIterator = executeAndCollectWithClient(env, arcticSource);
@@ -303,7 +307,8 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     commit(table, taskWriter.complete(), true);
 
     ArcticSource<RowData> arcticSource = initArcticSource(true, SCAN_STARTUP_MODE_EARLIEST, tableId);
-    StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+    StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(
+        miniClusterResource.getClientConfiguration());
     // enable checkpoint
     env.enableCheckpointing(1000);
     ClientAndIterator<RowData> clientAndIterator = executeAndCollectWithClient(env, arcticSource);
@@ -327,7 +332,8 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
   @Test
   public void testLatestStartupMode() throws Exception {
     ArcticSource<RowData> arcticSource = initArcticSourceWithLatest();
-    StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+    StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(
+        miniClusterResource.getClientConfiguration());
     // enable checkpoint
     env.enableCheckpointing(1000);
 
@@ -367,7 +373,8 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     expected.addAll(Arrays.asList(excepts2()));
 
     ArcticSource<RowData> arcticSource = initArcticSource(true);
-    StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+    StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(
+        miniClusterResource.getClientConfiguration());
     // enable checkpoint
     env.enableCheckpointing(1000);
 //    env.setRestartStrategy(RestartStrategies.fixedDelayRestart(1, 0));
