@@ -18,6 +18,8 @@
 
 package com.netease.arctic.flink.read;
 
+import com.netease.arctic.TableTestBase;
+import com.netease.arctic.flink.InternalCatalogBuilder;
 import com.netease.arctic.flink.read.hybrid.enumerator.ContinuousSplitPlannerImplTest;
 import com.netease.arctic.flink.read.hybrid.reader.ReaderFunction;
 import com.netease.arctic.flink.read.hybrid.reader.RowDataReaderFunction;
@@ -46,12 +48,7 @@ import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.datastream.DataStreamUtils;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
-import org.apache.flink.streaming.api.operators.ChainingStrategy;
-import org.apache.flink.streaming.api.operators.OneInputStreamOperator;
 import org.apache.flink.streaming.api.operators.collect.ClientAndIterator;
-import org.apache.flink.streaming.api.watermark.Watermark;
-import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.table.data.GenericRowData;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.data.StringData;
@@ -64,7 +61,6 @@ import org.apache.iceberg.Schema;
 import org.apache.iceberg.flink.FlinkSchemaUtil;
 import org.apache.iceberg.io.TaskWriter;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -83,6 +79,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.netease.arctic.ams.api.MockArcticMetastoreServer.TEST_CATALOG_NAME;
 import static com.netease.arctic.ams.api.MockArcticMetastoreServer.TEST_DB_NAME;
+import static com.netease.arctic.flink.FlinkTestBase.FLINK_SCHEMA;
+import static com.netease.arctic.flink.FlinkTestBase.commit;
+import static com.netease.arctic.flink.read.hybrid.enumerator.ContinuousSplitPlannerImplTest.createTaskWriter;
+import static com.netease.arctic.flink.read.hybrid.enumerator.ContinuousSplitPlannerImplTest.ldt;
 import static com.netease.arctic.flink.read.hybrid.reader.RowDataReaderFunctionTest.assertArrayEquals;
 import static com.netease.arctic.flink.read.hybrid.reader.RowDataReaderFunctionTest.excepts;
 import static com.netease.arctic.flink.read.hybrid.reader.RowDataReaderFunctionTest.excepts2;
@@ -95,20 +95,15 @@ import static com.netease.arctic.flink.table.descriptors.ArcticValidator.SCAN_ST
 import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
-public class ArcticSourceTest extends ContinuousSplitPlannerImplTest implements Serializable {
+public class ArcticSourceTest extends TableTestBase implements Serializable {
   private static final Logger LOG = LoggerFactory.getLogger(ArcticSourceTest.class);
   private static final long serialVersionUID = 7418812854449034756L;
   private static final int PARALLELISM = 4;
+  private static ContinuousSplitPlannerImplTest plannerImplTest = new ContinuousSplitPlannerImplTest();
 
-  @BeforeClass
-  public static void beforeClass() {
-    try {
-      MINI_CLUSTER_RESOURCE.getMiniCluster().close();
-    } catch (Exception e) {
-      LOG.info("close mini cluster in base exception.", e);
-    }
-  }
-  
+  private InternalCatalogBuilder catalogBuilder;
+  private String metastoreUrl;
+
   @Rule
   public final MiniClusterWithClientResource miniClusterResource =
       new MiniClusterWithClientResource(
@@ -118,6 +113,13 @@ public class ArcticSourceTest extends ContinuousSplitPlannerImplTest implements 
               .setRpcServiceSharing(RpcServiceSharing.DEDICATED)
               .withHaLeadershipControl()
               .build());
+
+  public void before() throws Exception {
+    metastoreUrl = "thrift://127.0.0.1:" + AMS.port();
+    catalogBuilder = InternalCatalogBuilder.builder().metastoreUrl(metastoreUrl + "/" + TEST_CATALOG_NAME);
+
+    plannerImplTest.init();
+  }
 
   @Test(timeout = 30000)
   public void testArcticSourceStatic() throws Exception {
@@ -196,7 +198,7 @@ public class ArcticSourceTest extends ContinuousSplitPlannerImplTest implements 
 
     assertRecords(testKeyedTable, expected, Duration.ofMillis(10), 12000);
   }
-  
+
   @Test(timeout = 30000)
   public void testArcticContinuousSource() throws Exception {
     ArcticSource<RowData> arcticSource = initArcticSource(true);
@@ -597,6 +599,5 @@ public class ArcticSourceTest extends ContinuousSplitPlannerImplTest implements 
     }
   }
 
-  
 
 }

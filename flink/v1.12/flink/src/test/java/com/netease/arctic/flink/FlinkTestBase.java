@@ -300,7 +300,7 @@ public class FlinkTestBase extends TableTestBase {
     return createRowData(id, name, dateTime, RowKind.INSERT);
   }
 
-  protected static void commit(KeyedTable keyedTable, WriteResult result, boolean base) {
+  public static void commit(KeyedTable keyedTable, WriteResult result, boolean base) {
     if (base) {
       AppendFiles baseAppend = keyedTable.baseTable().newAppend();
       Arrays.stream(result.dataFiles()).forEach(baseAppend::appendFile);
