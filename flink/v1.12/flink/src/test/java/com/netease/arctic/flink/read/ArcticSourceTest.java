@@ -61,7 +61,7 @@ import org.apache.iceberg.Schema;
 import org.apache.iceberg.flink.FlinkSchemaUtil;
 import org.apache.iceberg.io.TaskWriter;
 import org.junit.Assert;
-import org.junit.Rule;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -104,8 +104,8 @@ public class ArcticSourceTest extends TableTestBase implements Serializable {
   private InternalCatalogBuilder catalogBuilder;
   private String metastoreUrl;
 
-  @Rule
-  public final MiniClusterWithClientResource miniClusterResource =
+  @ClassRule
+  public static final MiniClusterWithClientResource miniClusterResource =
       new MiniClusterWithClientResource(
           new MiniClusterResourceConfiguration.Builder()
               .setNumberTaskManagers(1)
