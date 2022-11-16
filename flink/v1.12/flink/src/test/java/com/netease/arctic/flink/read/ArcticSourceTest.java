@@ -102,6 +102,7 @@ public class ArcticSourceTest extends FlinkTestBase implements Serializable {
   private static final int PARALLELISM = 4;
 
   public void before() throws Exception {
+    super.before();
     ContinuousSplitPlannerImplTest.init(testKeyedTable);
   }
 
