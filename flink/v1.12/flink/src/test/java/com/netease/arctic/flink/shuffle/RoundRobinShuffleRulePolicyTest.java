@@ -20,6 +20,9 @@ package com.netease.arctic.flink.shuffle;
 
 import com.netease.arctic.data.DataTreeNode;
 import com.netease.arctic.flink.FlinkTestBase;
+import com.netease.arctic.flink.table.ArcticTableLoader;
+import com.netease.arctic.flink.util.ArcticUtils;
+import com.netease.arctic.table.KeyedTable;
 import org.apache.flink.api.common.functions.Partitioner;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.table.data.RowData;
@@ -34,7 +37,9 @@ public class RoundRobinShuffleRulePolicyTest extends FlinkTestBase {
 
   @Test
   public void testPrimaryKeyPartitionedTable() throws Exception {
-    ShuffleHelper helper = ShuffleHelper.build(testKeyedTable, testKeyedTable.schema(), FLINK_ROW_TYPE);
+    ArcticTableLoader tableLoader = ArcticTableLoader.of(PK_TABLE_ID, catalogBuilder);
+    KeyedTable table = ArcticUtils.loadArcticTable(tableLoader).asKeyedTable();
+    ShuffleHelper helper = ShuffleHelper.build(table, table.schema(), FLINK_ROW_TYPE);
     RoundRobinShuffleRulePolicy policy =
         new RoundRobinShuffleRulePolicy(helper, 5, 2);
     Map<Integer, Set<DataTreeNode>> subTaskTreeNodes = policy.getSubtaskTreeNodes();

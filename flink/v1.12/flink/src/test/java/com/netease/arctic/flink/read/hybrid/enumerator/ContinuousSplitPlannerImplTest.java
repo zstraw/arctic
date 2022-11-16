@@ -19,6 +19,7 @@
 package com.netease.arctic.flink.read.hybrid.enumerator;
 
 import com.netease.arctic.flink.FlinkTestBase;
+import com.netease.arctic.table.KeyedTable;
 import org.apache.flink.table.data.GenericRowData;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.data.StringData;
@@ -42,18 +43,22 @@ import java.util.concurrent.atomic.AtomicLong;
 public class ContinuousSplitPlannerImplTest extends FlinkTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(ContinuousSplitPlannerImplTest.class);
   protected static final RowType ROW_TYPE = FlinkSchemaUtil.convert(TABLE_SCHEMA);
-  protected final AtomicLong TRANSACTION_ID = new AtomicLong(1);
+  public static final AtomicLong TRANSACTION_ID = new AtomicLong(1);
 
-  protected static final LocalDateTime ldt =
+  public static final LocalDateTime ldt =
       LocalDateTime.of(
           LocalDate.of(2022, 1, 1),
           LocalTime.of(0, 0, 0, 0));
 
   @Before
   public void init() throws IOException {
+    init(testKeyedTable);
+  }
+
+  public static void init(KeyedTable table) throws IOException {
     //write base
     {
-      TaskWriter<RowData> taskWriter = createTaskWriter(true);
+      TaskWriter<RowData> taskWriter = createTaskWriter(true, table);
       List<RowData> baseData = new ArrayList<RowData>() {{
         add(GenericRowData.ofKind(
             RowKind.INSERT, 1, StringData.fromString("john"), TimestampData.fromLocalDateTime(ldt)));
@@ -67,12 +72,12 @@ public class ContinuousSplitPlannerImplTest extends FlinkTestBase {
       for (RowData record : baseData) {
         taskWriter.write(record);
       }
-      commit(testKeyedTable, taskWriter.complete(), true);
+      commit(table, taskWriter.complete(), true);
     }
 
     //write change insert
     {
-      TaskWriter<RowData> taskWriter = createTaskWriter(false);
+      TaskWriter<RowData> taskWriter = createTaskWriter(false, table);
       List<RowData> insert = new ArrayList<RowData>() {{
         add(GenericRowData.ofKind(
             RowKind.INSERT, 5, StringData.fromString("mary"), TimestampData.fromLocalDateTime(ldt)));
@@ -82,12 +87,12 @@ public class ContinuousSplitPlannerImplTest extends FlinkTestBase {
       for (RowData record : insert) {
         taskWriter.write(record);
       }
-      commit(testKeyedTable, taskWriter.complete(), true);
+      commit(table, taskWriter.complete(), false);
     }
 
     //write change delete
     {
-      TaskWriter<RowData> taskWriter = createTaskWriter(false);
+      TaskWriter<RowData> taskWriter = createTaskWriter(false, table);
       List<RowData> update = new ArrayList<RowData>() {{
         add(GenericRowData.ofKind(
             RowKind.DELETE, 5, StringData.fromString("mary"), TimestampData.fromLocalDateTime(ldt)));
@@ -98,11 +103,11 @@ public class ContinuousSplitPlannerImplTest extends FlinkTestBase {
       for (RowData record : update) {
         taskWriter.write(record);
       }
-      commit(testKeyedTable, taskWriter.complete(), false);
+      commit(table, taskWriter.complete(), false);
     }
   }
 
-  protected TaskWriter<RowData> createTaskWriter(boolean base) {
-    return createKeyedTaskWriter(testKeyedTable, ROW_TYPE, TRANSACTION_ID.getAndIncrement(), base);
+  public static TaskWriter<RowData> createTaskWriter(boolean base, KeyedTable table) {
+    return createKeyedTaskWriter(table, ROW_TYPE, TRANSACTION_ID.getAndIncrement(), base);
   }
 }

@@ -20,7 +20,9 @@ package com.netease.arctic.flink.write;
 
 import com.netease.arctic.flink.FlinkTestBase;
 import com.netease.arctic.flink.table.ArcticTableLoader;
+import com.netease.arctic.flink.util.ArcticUtils;
 import com.netease.arctic.flink.util.DataUtil;
+import com.netease.arctic.table.ArcticTable;
 import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.CheckpointConfig;
@@ -58,18 +60,19 @@ public class FlinkSinkTest extends FlinkTestBase {
 
     DataStream<RowData> input = env.fromElements(data.stream().map(DataUtil::toRowData).toArray(RowData[]::new));
 
+    ArcticTableLoader tableLoader = ArcticTableLoader.of(PK_TABLE_ID, catalogBuilder);
+    ArcticTable table = ArcticUtils.loadArcticTable(tableLoader);
     FlinkSink
         .forRowData(input)
-        .context(Optional::of)
-        .table(testKeyedTable)
-        .tableLoader(ArcticTableLoader.of(PK_TABLE_ID, catalogBuilder))
+        .table(table)
+        .tableLoader(tableLoader)
         .flinkSchema(FLINK_SCHEMA)
         .build();
 
     env.execute();
 
-    testKeyedTable.changeTable().refresh();
-    List<Record> actual = readKeyedTable(testKeyedTable);
+    table.asKeyedTable().changeTable().refresh();
+    List<Record> actual = readKeyedTable(table.asKeyedTable());
 
     Set<Record> expected = toRecords(DataUtil.toRowSet(data));
     Assert.assertEquals(expected, new HashSet<>(actual));

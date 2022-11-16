@@ -19,7 +19,7 @@
 package com.netease.arctic.flink.read;
 
 
-import com.netease.arctic.flink.read.hybrid.reader.RowDataReaderFunctionTest;
+import com.netease.arctic.flink.read.hybrid.enumerator.ContinuousSplitPlannerImplTest;
 import com.netease.arctic.flink.read.hybrid.split.ArcticSplit;
 import org.apache.iceberg.TableScan;
 import org.junit.Assert;
@@ -29,7 +29,9 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class FlinkSplitPlannerTest extends RowDataReaderFunctionTest {
+import static com.netease.arctic.flink.read.hybrid.reader.RowDataReaderFunctionTest.writeUpdate;
+
+public class FlinkSplitPlannerTest extends ContinuousSplitPlannerImplTest {
 
   @Test
   public void testPlanSplitFromKeyedTable() {
@@ -48,7 +50,7 @@ public class FlinkSplitPlannerTest extends RowDataReaderFunctionTest {
     Assert.assertEquals(7, splitList.size());
 
     long startSnapshotId = testKeyedTable.changeTable().currentSnapshot().snapshotId();
-    writeUpdate();
+    writeUpdate(testKeyedTable);
     testKeyedTable.changeTable().refresh();
     long nowSnapshotId = testKeyedTable.changeTable().currentSnapshot().snapshotId();
     TableScan tableScan = testKeyedTable.changeTable().newScan().appendsBetween(startSnapshotId, nowSnapshotId);

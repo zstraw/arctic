@@ -23,6 +23,9 @@ import com.netease.arctic.flink.read.hybrid.assigner.ShuffleSplitAssigner;
 import com.netease.arctic.flink.read.hybrid.assigner.ShuffleSplitAssignerTest;
 import com.netease.arctic.flink.read.hybrid.split.ArcticSplit;
 import com.netease.arctic.flink.read.hybrid.split.TemporalJoinSplits;
+import com.netease.arctic.flink.table.ArcticTableLoader;
+import com.netease.arctic.flink.util.ArcticUtils;
+import com.netease.arctic.table.KeyedTable;
 import org.apache.flink.api.connector.source.SplitEnumeratorContext;
 import org.junit.Assert;
 import org.junit.Test;
@@ -43,7 +46,9 @@ public class ArcticSourceEnumStateSerializerTest extends ShuffleSplitAssignerTes
   public void testArcticEnumState() throws IOException {
     ShuffleSplitAssigner shuffleSplitAssigner = instanceSplitAssigner(3);
 
-    List<ArcticSplit> splitList = FlinkSplitPlanner.planFullTable(testKeyedTable, new AtomicInteger());
+    ArcticTableLoader tableLoader = ArcticTableLoader.of(PK_TABLE_ID, catalogBuilder);
+    KeyedTable table = ArcticUtils.loadArcticTable(tableLoader).asKeyedTable();
+    List<ArcticSplit> splitList = FlinkSplitPlanner.planFullTable(table, new AtomicInteger());
     shuffleSplitAssigner.onDiscoveredSplits(splitList);
     TemporalJoinSplits splits = new TemporalJoinSplits(splitList, null);
 

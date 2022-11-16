@@ -41,8 +41,8 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class ContinuousSplitPlannerImplTest extends FlinkTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(ContinuousSplitPlannerImplTest.class);
-  protected static final RowType ROW_TYPE = FlinkSchemaUtil.convert(TABLE_SCHEMA);
-  protected final AtomicLong TRANSACTION_ID = new AtomicLong(1);
+  public static final RowType ROW_TYPE = FlinkSchemaUtil.convert(TABLE_SCHEMA);
+  public static final AtomicLong TRANSACTION_ID = new AtomicLong(1);
 
   protected static final LocalDateTime ldt =
       LocalDateTime.of(
@@ -102,7 +102,7 @@ public class ContinuousSplitPlannerImplTest extends FlinkTestBase {
     }
   }
 
-  protected TaskWriter<RowData> createTaskWriter(boolean base) {
+  public static TaskWriter<RowData> createTaskWriter(boolean base) {
     return createKeyedTaskWriter(testKeyedTable, ROW_TYPE, TRANSACTION_ID.getAndIncrement(), base);
   }
 }

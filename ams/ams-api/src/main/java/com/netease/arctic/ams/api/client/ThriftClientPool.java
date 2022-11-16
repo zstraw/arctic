@@ -230,7 +230,7 @@ public class ThriftClientPool<T extends org.apache.thrift.TServiceClient> {
     int attempt;
     for (attempt = 0; attempt < retries; ++attempt) {
       try {
-        client = pool.borrowObject();
+        client = pool.borrowObject(1000);
         if (client.isDisConnected() || !pingFactory.ping(client.iface())) {
           if (attempt > 1) {
             // if attempt > 1, it means the server is maybe restarting, so we should wait a while
@@ -238,7 +238,7 @@ public class ThriftClientPool<T extends org.apache.thrift.TServiceClient> {
             Thread.sleep(retryInterval);
           }
           pool.clear();
-          client = pool.borrowObject();
+          client = pool.borrowObject(1000);
         } else {
           break;
         }
