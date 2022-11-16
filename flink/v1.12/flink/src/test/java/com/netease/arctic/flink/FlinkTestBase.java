@@ -31,8 +31,10 @@ import com.netease.arctic.table.TableProperties;
 import com.netease.arctic.table.UnkeyedTable;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.runtime.minicluster.RpcServiceSharing;
 import org.apache.flink.runtime.state.StateBackend;
 import org.apache.flink.runtime.state.filesystem.FsStateBackend;
+import org.apache.flink.runtime.testutils.MiniClusterResourceConfiguration;
 import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.environment.CheckpointConfig;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
@@ -81,13 +83,21 @@ import java.util.concurrent.ExecutionException;
 
 import static com.netease.arctic.ams.api.MockArcticMetastoreServer.TEST_CATALOG_NAME;
 import static org.apache.flink.table.api.config.TableConfigOptions.TABLE_DYNAMIC_TABLE_OPTIONS_ENABLED;
+import static org.apache.iceberg.flink.MiniClusterResource.DISABLE_CLASSLOADER_CHECK_CONFIG;
 
 public class FlinkTestBase extends TableTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(FlinkTestBase.class);
 
   @ClassRule
   public static final MiniClusterWithClientResource MINI_CLUSTER_RESOURCE =
-      MiniClusterResource.createWithClassloaderCheckDisabled();
+      new MiniClusterWithClientResource(
+          new MiniClusterResourceConfiguration.Builder()
+              .setNumberTaskManagers(1)
+              .setNumberSlotsPerTaskManager(4)
+              .setRpcServiceSharing(RpcServiceSharing.DEDICATED)
+              .setConfiguration(DISABLE_CLASSLOADER_CHECK_CONFIG)
+              .withHaLeadershipControl()
+              .build());
   
   public static boolean IS_LOCAL = true;
   public static String METASTORE_URL = "thrift://127.0.0.1:" + AMS.port();
