@@ -63,10 +63,10 @@ import org.apache.iceberg.UpdateSchema;
 import org.apache.iceberg.encryption.EncryptionManager;
 import org.apache.iceberg.io.LocationProvider;
 import org.apache.iceberg.util.StructLikeMap;
+import org.apache.thrift.TException;
 
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Base implementation of {@link UnkeyedTable}, wrapping a {@link Table}.
@@ -172,7 +172,11 @@ public class BaseUnkeyedTable implements UnkeyedTable, HasTableOperations {
 
   @Override
   public UpdateSchema updateSchema() {
-    return new TracedSchemaUpdate(icebergTable.updateSchema(), new AmsTableTracer(this, null, client));
+    if (client != null) {
+      return new TracedSchemaUpdate(icebergTable.updateSchema(), new AmsTableTracer(this, null, client));
+    } else {
+      return icebergTable.updateSchema();
+    }
   }
 
   @Override
@@ -344,5 +348,17 @@ public class BaseUnkeyedTable implements UnkeyedTable, HasTableOperations {
   @Override
   public UpdatePartitionProperties updatePartitionProperties(Transaction transaction) {
     return new PartitionPropertiesUpdate(this, transaction);
+  }
+
+  @Override
+  public long beginTransaction(String signature) {
+    if (client == null) {
+      throw new UnsupportedOperationException("Ams client is null");
+    }
+    try {
+      return client.allocateTransactionId(tableIdentifier.buildTableIdentifier(), signature);
+    } catch (TException e) {
+      throw new IllegalStateException("failed begin transaction", e);
+    }
   }
 }

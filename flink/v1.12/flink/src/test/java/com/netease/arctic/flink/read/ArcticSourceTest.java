@@ -69,7 +69,6 @@ import org.apache.iceberg.types.Types;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -138,11 +137,12 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     testCatalog.dropTable(FAIL_TABLE_ID, true);
   }
 
-  @Test
+  @Test(timeout = 30000)
   public void testArcticSourceStatic() throws Exception {
     ArcticSource<RowData> arcticSource = initArcticSource(false);
 
-    StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+    StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(
+        miniClusterResource.getClientConfiguration());
     // enable checkpoint
     env.enableCheckpointing(3000);
     // set the source parallelism to 4
@@ -162,14 +162,12 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     assertArrayEquals(excepts(), actualResult);
   }
 
-  @Ignore
-  @Test
+  @Test(timeout = 30000)
   public void testArcticSourceStaticJobManagerFailover() throws Exception {
     testArcticSource(FailoverType.JM);
   }
 
-  @Ignore
-  @Test
+  @Test(timeout = 30000)
   public void testArcticSourceStaticTaskManagerFailover() throws Exception {
     testArcticSource(FailoverType.TM);
   }
@@ -184,7 +182,8 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     expected.addAll(records);
 
     ArcticSource<RowData> arcticSource = initArcticSource(false);
-    StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+    StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(
+        miniClusterResource.getClientConfiguration());
     // enable checkpoint
     env.enableCheckpointing(1000);
     env.setRestartStrategy(RestartStrategies.fixedDelayRestart(1, 0));
@@ -226,7 +225,8 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     writeUpdate(records);
 
     ArcticSource<RowData> arcticSource = initArcticDimSource(true);
-    StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+    StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(
+        miniClusterResource.getClientConfiguration());
     // enable checkpoint
     env.enableCheckpointing(1000);
     env.setRestartStrategy(RestartStrategies.fixedDelayRestart(10, 0));
@@ -256,10 +256,11 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     Assert.assertEquals(Long.MAX_VALUE, WatermarkAwareFailWrapper.getWatermarkAfterFailover());
   }
 
-  @Test
+  @Test(timeout = 30000)
   public void testArcticContinuousSource() throws Exception {
     ArcticSource<RowData> arcticSource = initArcticSource(true);
-    StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+    StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(
+        miniClusterResource.getClientConfiguration());
     // enable checkpoint
     env.enableCheckpointing(1000);
     ClientAndIterator<RowData> clientAndIterator = executeAndCollectWithClient(env, arcticSource);
@@ -306,7 +307,8 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     commit(table, taskWriter.complete(), true);
 
     ArcticSource<RowData> arcticSource = initArcticSource(true, SCAN_STARTUP_MODE_EARLIEST, tableId);
-    StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+    StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(
+        miniClusterResource.getClientConfiguration());
     // enable checkpoint
     env.enableCheckpointing(1000);
     ClientAndIterator<RowData> clientAndIterator = executeAndCollectWithClient(env, arcticSource);
@@ -330,7 +332,8 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
   @Test
   public void testLatestStartupMode() throws Exception {
     ArcticSource<RowData> arcticSource = initArcticSourceWithLatest();
-    StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+    StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(
+        miniClusterResource.getClientConfiguration());
     // enable checkpoint
     env.enableCheckpointing(1000);
 
@@ -354,14 +357,12 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     jobClient.cancel();
   }
 
-  @Ignore
-  @Test
+  @Test(timeout = 30000)
   public void testArcticContinuousSourceJobManagerFailover() throws Exception {
     testArcticContinuousSource(FailoverType.JM);
   }
 
-  @Ignore
-  @Test
+  @Test(timeout = 30000)
   public void testArcticContinuousSourceTaskManagerFailover() throws Exception {
     testArcticContinuousSource(FailoverType.TM);
   }
@@ -372,7 +373,8 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     expected.addAll(Arrays.asList(excepts2()));
 
     ArcticSource<RowData> arcticSource = initArcticSource(true);
-    StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+    StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(
+        miniClusterResource.getClientConfiguration());
     // enable checkpoint
     env.enableCheckpointing(1000);
 //    env.setRestartStrategy(RestartStrategies.fixedDelayRestart(1, 0));
