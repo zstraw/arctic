@@ -120,7 +120,7 @@ public class TableTestBase {
 
   protected ArcticCatalog testCatalog;
   protected UnkeyedTable testTable;
-  protected static KeyedTable testKeyedTable;
+  protected KeyedTable testKeyedTable;
   protected KeyedTable testNoPartitionTable;
 
   @Rule

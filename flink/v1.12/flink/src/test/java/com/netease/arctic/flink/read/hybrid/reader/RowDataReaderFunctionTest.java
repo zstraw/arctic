@@ -89,7 +89,7 @@ public class RowDataReaderFunctionTest extends ContinuousSplitPlannerImplTest {
     assertArrayEquals(excepts(), actual);
 
     long snapshotId = table.changeTable().currentSnapshot().snapshotId();
-    writeUpdate();
+    writeUpdate(testKeyedTable);
     table.changeTable().refresh();
     long nowSnapshotId = table.changeTable().currentSnapshot().snapshotId();
 
@@ -138,13 +138,9 @@ public class RowDataReaderFunctionTest extends ContinuousSplitPlannerImplTest {
         .toArray(new RowData[records.size()]);
   }
 
-  public static void writeUpdate() throws IOException {
+  public static void writeUpdate(KeyedTable table) throws IOException {
     //write change update
-    writeUpdate(updateRecords());
-  }
-
-  public static void writeUpdate(List<RowData> input) throws IOException {
-    writeUpdate(input, testKeyedTable);
+    writeUpdate(updateRecords(), table);
   }
 
   public static void writeUpdate(List<RowData> input, KeyedTable table) throws IOException {

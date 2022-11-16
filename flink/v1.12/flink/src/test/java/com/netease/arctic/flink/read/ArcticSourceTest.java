@@ -94,13 +94,12 @@ import static com.netease.arctic.flink.table.descriptors.ArcticValidator.SCAN_ST
 import static com.netease.arctic.flink.table.descriptors.ArcticValidator.SCAN_STARTUP_MODE_LATEST;
 import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.apache.flink.util.Preconditions.checkNotNull;
+import static org.apache.iceberg.flink.MiniClusterResource.DISABLE_CLASSLOADER_CHECK_CONFIG;
 
 public class ArcticSourceTest extends TableTestBase implements Serializable {
   private static final Logger LOG = LoggerFactory.getLogger(ArcticSourceTest.class);
   private static final long serialVersionUID = 7418812854449034756L;
   private static final int PARALLELISM = 4;
-  private static ContinuousSplitPlannerImplTest plannerImplTest = new ContinuousSplitPlannerImplTest();
-
   private InternalCatalogBuilder catalogBuilder;
   private String metastoreUrl;
 
@@ -111,6 +110,7 @@ public class ArcticSourceTest extends TableTestBase implements Serializable {
               .setNumberTaskManagers(1)
               .setNumberSlotsPerTaskManager(PARALLELISM)
               .setRpcServiceSharing(RpcServiceSharing.DEDICATED)
+              .setConfiguration(DISABLE_CLASSLOADER_CHECK_CONFIG)
               .withHaLeadershipControl()
               .build());
 
@@ -118,7 +118,7 @@ public class ArcticSourceTest extends TableTestBase implements Serializable {
     metastoreUrl = "thrift://127.0.0.1:" + AMS.port();
     catalogBuilder = InternalCatalogBuilder.builder().metastoreUrl(metastoreUrl + "/" + TEST_CATALOG_NAME);
 
-    plannerImplTest.init();
+    ContinuousSplitPlannerImplTest.init(testKeyedTable);
   }
 
   @Test(timeout = 30000)
@@ -158,9 +158,9 @@ public class ArcticSourceTest extends TableTestBase implements Serializable {
   public void testArcticSource(FailoverType failoverType) throws Exception {
     List<RowData> expected = new ArrayList<>(exceptsCollection());
     List<RowData> updated = updateRecords();
-    writeUpdate(updated);
+    writeUpdate(updated, testKeyedTable);
     List<RowData> records = generateRecords(2, 1);
-    writeUpdate(records);
+    writeUpdate(records, testKeyedTable);
     expected.addAll(updated);
     expected.addAll(records);
 
@@ -214,7 +214,7 @@ public class ArcticSourceTest extends TableTestBase implements Serializable {
     assertArrayEquals(excepts(), actualResult);
 
     LOG.info("begin write update_before update_after data and commit new snapshot to change table.");
-    writeUpdate();
+    writeUpdate(testKeyedTable);
 
     actualResult = collectRecordsFromUnboundedStream(clientAndIterator, excepts2().length);
 
@@ -232,7 +232,7 @@ public class ArcticSourceTest extends TableTestBase implements Serializable {
         .withPrimaryKeySpec(PRIMARY_KEY_SPEC)
         .create().asKeyedTable();
 
-    TaskWriter<RowData> taskWriter = createTaskWriter(true);
+    TaskWriter<RowData> taskWriter = createTaskWriter(true, testKeyedTable);
     List<RowData> baseData = new ArrayList<RowData>() {{
       add(GenericRowData.ofKind(
           RowKind.INSERT, 1, StringData.fromString("john"), TimestampData.fromLocalDateTime(ldt)));
@@ -285,7 +285,7 @@ public class ArcticSourceTest extends TableTestBase implements Serializable {
       if (JobStatus.RUNNING == jobClient.getJobStatus().get()) {
         Thread.sleep(500);
         LOG.info("begin write update_before update_after data and commit new snapshot to change table.");
-        writeUpdate();
+        writeUpdate(testKeyedTable);
         break;
       }
       Thread.sleep(100);
@@ -309,7 +309,7 @@ public class ArcticSourceTest extends TableTestBase implements Serializable {
 
   public void testArcticContinuousSource(final FailoverType failoverType) throws Exception {
     List<RowData> expected = new ArrayList<>(Arrays.asList(excepts()));
-    writeUpdate();
+    writeUpdate(testKeyedTable);
     expected.addAll(Arrays.asList(excepts2()));
 
     ArcticSource<RowData> arcticSource = initArcticSource(true);
@@ -338,7 +338,7 @@ public class ArcticSourceTest extends TableTestBase implements Serializable {
       Thread.sleep(10);
       List<RowData> records = generateRecords(2, i);
       expected.addAll(records);
-      writeUpdate(records);
+      writeUpdate(records, testKeyedTable);
       if (i == 2) {
         triggerFailover(failoverType, jobId, () -> {
         }, miniClusterResource.getMiniCluster());
@@ -390,6 +390,7 @@ public class ArcticSourceTest extends TableTestBase implements Serializable {
         keyedTable.io()
     );
 
+    LOG.info("read table. {}", keyedTable);
     List<RowData> actual = new ArrayList<>();
     arcticSplits.forEach(split -> {
       LOG.info("ArcticSplit {}.", split);

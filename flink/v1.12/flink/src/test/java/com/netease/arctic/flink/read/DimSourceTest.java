@@ -90,9 +90,9 @@ public class DimSourceTest extends FlinkTestBase implements Serializable {
   @Test(timeout = 30000)
   public void testDimTaskManagerFailover() throws Exception {
     List<RowData> updated = updateRecords();
-    writeUpdate(updated);
+    writeUpdate(updated, testKeyedTable);
     List<RowData> records = generateRecords(2, 1);
-    writeUpdate(records);
+    writeUpdate(records, testKeyedTable);
 
     ArcticSource<RowData> arcticSource = initArcticDimSource(true);
     StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
