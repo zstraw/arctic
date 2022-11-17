@@ -36,13 +36,12 @@ import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.JobStatus;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
+import org.apache.flink.api.common.time.Time;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.execution.JobClient;
 import org.apache.flink.runtime.highavailability.nonha.embedded.HaLeadershipControl;
 import org.apache.flink.runtime.minicluster.MiniCluster;
-import org.apache.flink.runtime.minicluster.RpcServiceSharing;
-import org.apache.flink.runtime.testutils.MiniClusterResourceConfiguration;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.datastream.DataStreamUtils;
@@ -58,7 +57,6 @@ import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.data.StringData;
 import org.apache.flink.table.data.TimestampData;
 import org.apache.flink.table.runtime.typeutils.InternalTypeInfo;
-import org.apache.flink.test.util.MiniClusterWithClientResource;
 import org.apache.flink.types.RowKind;
 import org.apache.flink.util.CloseableIterator;
 import org.apache.iceberg.Schema;
@@ -69,8 +67,6 @@ import org.apache.iceberg.types.Types;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Rule;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -85,6 +81,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.netease.arctic.ams.api.MockArcticMetastoreServer.TEST_CATALOG_NAME;
@@ -97,17 +94,6 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
 public class ArcticSourceTest extends RowDataReaderFunctionTest implements Serializable {
   private static final Logger LOG = LoggerFactory.getLogger(ArcticSourceTest.class);
   private static final long serialVersionUID = 7418812854449034756L;
-  private static final int PARALLELISM = 4;
-
-  @Rule
-  public final MiniClusterWithClientResource miniClusterResource =
-      new MiniClusterWithClientResource(
-          new MiniClusterResourceConfiguration.Builder()
-              .setNumberTaskManagers(1)
-              .setNumberSlotsPerTaskManager(PARALLELISM)
-              .setRpcServiceSharing(RpcServiceSharing.DEDICATED)
-              .withHaLeadershipControl()
-              .build());
 
   protected KeyedTable testFailoverTable;
   protected static final String sinkTableName = "test_sink_exactly_once";
@@ -138,7 +124,7 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     testCatalog.dropTable(FAIL_TABLE_ID, true);
   }
 
-  @Test
+  @Test(timeout = 30000)
   public void testArcticSourceStatic() throws Exception {
     ArcticSource<RowData> arcticSource = initArcticSource(false);
 
@@ -162,14 +148,12 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     assertArrayEquals(excepts(), actualResult);
   }
 
-  @Ignore
-  @Test
+  @Test(timeout = 30000)
   public void testArcticSourceStaticJobManagerFailover() throws Exception {
     testArcticSource(FailoverType.JM);
   }
 
-  @Ignore
-  @Test
+  @Test(timeout = 30000)
   public void testArcticSourceStaticTaskManagerFailover() throws Exception {
     testArcticSource(FailoverType.TM);
   }
@@ -187,7 +171,7 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
     // enable checkpoint
     env.enableCheckpointing(1000);
-    env.setRestartStrategy(RestartStrategies.fixedDelayRestart(1, 0));
+    env.setRestartStrategy(RestartStrategies.failureRateRestart(100, Time.of(30, TimeUnit.SECONDS), Time.of(0, TimeUnit.SECONDS)));
 
     DataStream<RowData> input = env.fromSource(
             arcticSource,
@@ -213,50 +197,12 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
         failoverType,
         jobId,
         RecordCounterToFail::continueProcessing,
-        miniClusterResource.getMiniCluster());
+        MINI_CLUSTER_RESOURCE.getMiniCluster());
 
-    assertRecords(testFailoverTable, expected, Duration.ofMillis(10), 12000);
+    assertRecords(testFailoverTable, expected, Duration.ofMillis(5000), 12000);
   }
 
   @Test(timeout = 30000)
-  public void testDimTaskManagerFailover() throws Exception {
-    List<RowData> updated = updateRecords();
-    writeUpdate(updated);
-    List<RowData> records = generateRecords(2, 1);
-    writeUpdate(records);
-
-    ArcticSource<RowData> arcticSource = initArcticDimSource(true);
-    StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-    // enable checkpoint
-    env.enableCheckpointing(1000);
-    env.setRestartStrategy(RestartStrategies.fixedDelayRestart(10, 0));
-
-    DataStream<RowData> input = env.fromSource(
-            arcticSource,
-            WatermarkStrategy.noWatermarks(),
-            "ArcticParallelSource")
-        .setParallelism(PARALLELISM);
-
-    WatermarkAwareFailWrapper.wrapWithFailureAfter(input);
-
-    JobClient jobClient = env.executeAsync("Dim Arctic Source Failover Test");
-    JobID jobId = jobClient.getJobID();
-
-    WatermarkAwareFailWrapper.waitToFail();
-    triggerFailover(
-        FailoverType.TM,
-        jobId,
-        WatermarkAwareFailWrapper::continueProcessing,
-        miniClusterResource.getMiniCluster());
-
-    while (WatermarkAwareFailWrapper.watermarkCounter.get() != PARALLELISM) {
-      Thread.sleep(1000);
-      LOG.info("wait for watermark after failover");
-    }
-    Assert.assertEquals(Long.MAX_VALUE, WatermarkAwareFailWrapper.getWatermarkAfterFailover());
-  }
-
-  @Test
   public void testArcticContinuousSource() throws Exception {
     ArcticSource<RowData> arcticSource = initArcticSource(true);
     StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
@@ -354,14 +300,12 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     jobClient.cancel();
   }
 
-  @Ignore
-  @Test
+  @Test(timeout = 30000)
   public void testArcticContinuousSourceJobManagerFailover() throws Exception {
     testArcticContinuousSource(FailoverType.JM);
   }
 
-  @Ignore
-  @Test
+  @Test(timeout = 30000)
   public void testArcticContinuousSourceTaskManagerFailover() throws Exception {
     testArcticContinuousSource(FailoverType.TM);
   }
@@ -375,7 +319,7 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
     // enable checkpoint
     env.enableCheckpointing(1000);
-//    env.setRestartStrategy(RestartStrategies.fixedDelayRestart(1, 0));
+    env.setRestartStrategy(RestartStrategies.failureRateRestart(100, Time.of(30, TimeUnit.SECONDS), Time.of(0, TimeUnit.SECONDS)));
 
     DataStream<RowData> input = env.fromSource(
             arcticSource,
@@ -400,13 +344,13 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
       writeUpdate(records);
       if (i == 2) {
         triggerFailover(failoverType, jobId, () -> {
-        }, miniClusterResource.getMiniCluster());
+        }, MINI_CLUSTER_RESOURCE.getMiniCluster());
       }
     }
 
     // wait longer for continuous source to reduce flakiness
     // because CI servers tend to be overloaded.
-    assertRecords(testFailoverTable, expected, Duration.ofMillis(10), 12000);
+    assertRecords(testFailoverTable, expected, Duration.ofMillis(5000), 12000);
     jobClient.cancel();
   }
 
@@ -511,6 +455,7 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
 
   private static void restartTaskManager(Runnable afterFailAction, MiniCluster miniCluster)
       throws Exception {
+    LOG.info("terminate tm");
     miniCluster.terminateTaskManager(0).get();
     afterFailAction.run();
     miniCluster.startTaskManager();

@@ -216,11 +216,15 @@ public class ArcticSourceEnumerator extends AbstractArcticEnumerator {
   public void checkAndNotifyReader(Collection<String> finishedSplitIds) {
     if (temporalJoinSplits == null) {
       sourceEventBeforeFirstPlan = true;
+      LOG.info("temporalJoinSplits is null");
       return;
     }
 
+    Boolean hasFinished = null;
     if (temporalJoinSplits.hasNotifiedReader() ||
-        !temporalJoinSplits.removeAndReturnIfAllFinished(finishedSplitIds)) {
+        (hasFinished = !temporalJoinSplits.removeAndReturnIfAllFinished(finishedSplitIds))) {
+      LOG.info("has notified reader: {}, initial splits haven't finished: {}", temporalJoinSplits.hasNotifiedReader(),
+          hasFinished);
       return;
     }
     notifyReaders();

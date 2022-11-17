@@ -19,27 +19,22 @@
 package com.netease.arctic.flink.util;
 
 import com.netease.arctic.flink.interceptor.ProxyFactory;
+import com.netease.arctic.flink.write.WriteResult;
 import com.netease.arctic.io.ArcticFileIO;
-import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
-import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
 import org.apache.flink.streaming.api.operators.AbstractUdfStreamOperator;
 import org.apache.flink.streaming.api.operators.MailboxExecutor;
 import org.apache.flink.streaming.api.operators.OneInputStreamOperator;
 import org.apache.flink.streaming.api.operators.OneInputStreamOperatorFactory;
 import org.apache.flink.streaming.runtime.tasks.ProcessingTimeService;
-import org.apache.flink.table.data.RowData;
-import org.apache.flink.table.types.logical.RowType;
-import org.apache.iceberg.PartitionSpec;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.encryption.EncryptionManager;
 import org.apache.iceberg.flink.TableLoader;
-import org.apache.iceberg.flink.sink.TaskWriterFactory;
+import org.apache.iceberg.flink.sink.IcebergFilesCommitter;
 import org.apache.iceberg.flink.source.FlinkInputFormat;
 import org.apache.iceberg.flink.source.StreamingReaderOperator;
 import org.apache.iceberg.io.FileIO;
-import org.apache.iceberg.io.WriteResult;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -51,34 +46,10 @@ import java.util.List;
  */
 public class IcebergClassUtil {
   private static final String ICEBERG_SCAN_CONTEXT_CLASS = "org.apache.iceberg.flink.source.ScanContext";
-  private static final String ICEBERG_PARTITION_SELECTOR_CLASS = "org.apache.iceberg.flink.sink.PartitionKeySelector";
-  private static final String ICEBERG_FILE_COMMITTER_CLASS = "org.apache.iceberg.flink.sink.IcebergFilesCommitter";
-  private static final String ICEBERG_FILE_WRITER_CLASS = "org.apache.iceberg.flink.sink.IcebergStreamWriter";
-
-  public static KeySelector<RowData, Object> newPartitionKeySelector(
-      PartitionSpec spec, Schema schema, RowType flinkSchema) {
-    try {
-      Class<?> clazz = forName(ICEBERG_PARTITION_SELECTOR_CLASS);
-      Constructor<?> c = clazz.getConstructor(PartitionSpec.class, Schema.class, RowType.class);
-      c.setAccessible(true);
-      return (KeySelector<RowData, Object>) c.newInstance(spec, schema, flinkSchema);
-    } catch (NoSuchMethodException | IllegalAccessException |
-        InvocationTargetException | InstantiationException e) {
-      throw new RuntimeException(e);
-    }
-  }
 
   public static OneInputStreamOperator<WriteResult, Void> newIcebergFilesCommitter(
       TableLoader tableLoader, boolean replacePartitions) {
-    try {
-      Class<?> clazz = forName(ICEBERG_FILE_COMMITTER_CLASS);
-      Constructor<?> c = clazz.getDeclaredConstructor(TableLoader.class, boolean.class);
-      c.setAccessible(true);
-      return (OneInputStreamOperator<WriteResult, Void>) c.newInstance(tableLoader, replacePartitions);
-    } catch (NoSuchMethodException | IllegalAccessException |
-        InvocationTargetException | InstantiationException e) {
-      throw new RuntimeException(e);
-    }
+    return new IcebergFilesCommitter(tableLoader, replacePartitions);
   }
 
   public static OneInputStreamOperator<WriteResult, Void> newIcebergFilesCommitter(TableLoader tableLoader,
@@ -86,14 +57,6 @@ public class IcebergClassUtil {
                                                                                    ArcticFileIO arcticFileIO) {
     OneInputStreamOperator<WriteResult, Void> obj = newIcebergFilesCommitter(tableLoader, replacePartitions);
     return (OneInputStreamOperator) ProxyUtil.getProxy(obj, arcticFileIO);
-  }
-
-  public static ProxyFactory<AbstractStreamOperator> getIcebergStreamWriterProxyFactory(
-      String fullTableName, TaskWriterFactory taskWriterFactory, ArcticFileIO arcticFileIO) {
-    Class<?> clazz = forName(ICEBERG_FILE_WRITER_CLASS);
-    return (ProxyFactory<AbstractStreamOperator>) ProxyUtil.getProxyFactory(clazz, arcticFileIO,
-        new Class[]{String.class, TaskWriterFactory.class},
-        new Object[]{fullTableName, taskWriterFactory});
   }
 
   public static StreamingReaderOperator newStreamingReaderOperator(FlinkInputFormat format,

@@ -185,6 +185,9 @@ public class ShuffleSplitAssigner implements SplitAssigner {
   }
 
   void deserializePartitionIndex(long[] shuffleSplitRelation) {
+    if (shuffleSplitRelation == null) {
+      return;
+    }
     int prefixParams = 3;
     this.totalParallelism = (int) shuffleSplitRelation[0];
     this.totalSplitNum = (int) shuffleSplitRelation[1];

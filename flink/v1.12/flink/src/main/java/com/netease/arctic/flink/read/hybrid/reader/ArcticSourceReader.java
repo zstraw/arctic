@@ -77,6 +77,7 @@ public class ArcticSourceReader<T> extends
   public void start() {
     // We request a split only if we did not get splits during the checkpoint restore.
     // Otherwise, reader restarts will keep requesting more and more splits.
+    LOGGER.info("reader start");
     if (getNumberOfCurrentlyAssignedSplits() == 0) {
       requestSplit(Collections.emptyList());
     }
