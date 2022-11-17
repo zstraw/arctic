@@ -121,7 +121,7 @@ public class IcebergFilesCommitter extends AbstractStreamOperator<Void>
   private static final ListStateDescriptor<SortedMap<Long, byte[]>> STATE_DESCRIPTOR = buildStateDescriptor();
   private transient ListState<SortedMap<Long, byte[]>> checkpointsState;
 
-  IcebergFilesCommitter(TableLoader tableLoader, boolean replacePartitions) {
+  public IcebergFilesCommitter(TableLoader tableLoader, boolean replacePartitions) {
     this.tableLoader = tableLoader;
     this.replacePartitions = replacePartitions;
   }
