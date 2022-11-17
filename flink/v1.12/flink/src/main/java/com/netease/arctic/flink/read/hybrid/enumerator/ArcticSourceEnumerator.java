@@ -223,8 +223,8 @@ public class ArcticSourceEnumerator extends AbstractArcticEnumerator {
     Boolean hasFinished = null;
     if (temporalJoinSplits.hasNotifiedReader() ||
         (hasFinished = !temporalJoinSplits.removeAndReturnIfAllFinished(finishedSplitIds))) {
-      LOG.info("has notified reader: {}, initial splits haven't finished: {}", temporalJoinSplits.hasNotifiedReader()
-      , hasFinished);
+      LOG.info("has notified reader: {}, initial splits haven't finished: {}", temporalJoinSplits.hasNotifiedReader(),
+          hasFinished);
       return;
     }
     notifyReaders();
