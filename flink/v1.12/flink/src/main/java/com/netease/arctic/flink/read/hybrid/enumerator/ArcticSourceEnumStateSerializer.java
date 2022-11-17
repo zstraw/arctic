@@ -31,6 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Objects;
 
@@ -78,6 +79,7 @@ public class ArcticSourceEnumStateSerializer implements SimpleVersionedSerialize
 
     out.writeBoolean(enumState.shuffleSplitRelation() != null);
     if (enumState.shuffleSplitRelation() != null) {
+      LOGGER.info("write shuffleSplitRelation: {}", Arrays.toString(enumState.shuffleSplitRelation()));
       long[] shuffleSplitRelation = enumState.shuffleSplitRelation();
       out.writeInt(Objects.requireNonNull(shuffleSplitRelation).length);
       for (long l : shuffleSplitRelation) {
