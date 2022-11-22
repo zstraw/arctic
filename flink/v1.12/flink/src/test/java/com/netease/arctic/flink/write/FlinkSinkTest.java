@@ -19,6 +19,7 @@
 package com.netease.arctic.flink.write;
 
 import com.netease.arctic.flink.FlinkTestBase;
+import com.netease.arctic.flink.extension.MiniClusterExtension;
 import com.netease.arctic.flink.table.ArcticTableLoader;
 import com.netease.arctic.flink.util.DataUtil;
 import org.apache.flink.streaming.api.CheckpointingMode;
@@ -28,7 +29,8 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.data.RowData;
 import org.apache.iceberg.data.Record;
 import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -36,6 +38,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
+@ExtendWith({MiniClusterExtension.class})
 public class FlinkSinkTest extends FlinkTestBase {
 
   @Test

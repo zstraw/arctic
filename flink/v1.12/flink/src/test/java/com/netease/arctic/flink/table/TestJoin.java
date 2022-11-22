@@ -19,6 +19,7 @@
 package com.netease.arctic.flink.table;
 
 import com.netease.arctic.flink.FlinkTestBase;
+import com.netease.arctic.flink.extension.MiniClusterExtension;
 import com.netease.arctic.flink.util.ArcticUtils;
 import com.netease.arctic.flink.util.DataUtil;
 import com.netease.arctic.flink.util.TestUtil;
@@ -36,11 +37,11 @@ import org.apache.flink.types.Row;
 import org.apache.flink.types.RowKind;
 import org.apache.flink.util.CloseableIterator;
 import org.apache.iceberg.io.TaskWriter;
-import org.junit.After;
 import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,12 +59,10 @@ import static com.netease.arctic.ams.api.MockArcticMetastoreServer.TEST_CATALOG_
 import static com.netease.arctic.table.TableProperties.LOCATION;
 import static org.apache.flink.table.planner.factories.TestValuesTableFactory.registerData;
 
+@ExtendWith({MiniClusterExtension.class})
 public class TestJoin extends FlinkTestBase {
 
   public static final Logger LOG = LoggerFactory.getLogger(TestJoin.class);
-
-  @Rule
-  public TemporaryFolder tempFolder = new TemporaryFolder();
 
   private static final String DB = PK_TABLE_ID.getDatabase();
   private static final String TABLE = "test_keyed";
@@ -73,12 +72,13 @@ public class TestJoin extends FlinkTestBase {
     super.config(TEST_CATALOG_NAME);
   }
 
-  @After
+  @AfterEach
   public void after() {
     sql("DROP TABLE IF EXISTS arcticCatalog." + DB + "." + TABLE);
   }
 
-  @Test(timeout = 180000)
+  @Timeout(60)
+  @Test
   public void testRightEmptyLookupJoin() throws Exception {
     getEnv().getCheckpointConfig().disableCheckpointing();
     List<Object[]> data = new LinkedList<>();
@@ -132,7 +132,8 @@ public class TestJoin extends FlinkTestBase {
     Assert.assertEquals(DataUtil.toRowSet(expected), actual);
   }
 
-  @Test(timeout = 180000)
+  @Timeout(60)
+  @Test
   public void testLookupJoin() throws Exception {
     getEnv().getCheckpointConfig().disableCheckpointing();
     List<Object[]> data = new LinkedList<>();

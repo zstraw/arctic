@@ -33,7 +33,6 @@ import com.netease.arctic.table.UnkeyedTable;
 import com.netease.arctic.utils.ArcticDataFiles;
 import org.apache.hadoop.hive.metastore.api.Database;
 import org.apache.hadoop.hive.metastore.api.Partition;
-import org.apache.iceberg.DataFiles;
 import org.apache.iceberg.PartitionSpec;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.StructLike;
@@ -100,8 +99,8 @@ public class HiveTableTestBase extends TableTestBase {
   public UnkeyedHiveTable testHiveTable;
   public KeyedHiveTable testKeyedHiveTable;
 
-  protected UnkeyedHiveTable testUnPartitionHiveTable;
-  protected KeyedHiveTable testUnPartitionKeyedHiveTable;
+  public UnkeyedHiveTable testUnPartitionHiveTable;
+  public KeyedHiveTable testUnPartitionKeyedHiveTable;
 
   @BeforeClass
   public static void startMetastore() throws Exception {

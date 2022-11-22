@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 
-package com.netease.arctic.flink.kafka.testutils;
+package com.netease.arctic.flink.kafka;
 
-import org.apache.flink.util.StringUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -85,7 +85,7 @@ public class KafkaUtil {
     }
 
     Slf4jLogConsumer logConsumer = new Slf4jLogConsumer(logger);
-    if (!StringUtils.isNullOrWhitespaceOnly(loggerPrefix)) {
+    if (!StringUtils.isBlank(loggerPrefix)) {
       logConsumer.withPrefix(loggerPrefix);
     }
     return new KafkaContainer(DockerImageName.parse(dockerImageVersion))

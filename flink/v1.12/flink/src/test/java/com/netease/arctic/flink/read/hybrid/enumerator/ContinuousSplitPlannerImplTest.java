@@ -27,7 +27,7 @@ import org.apache.flink.table.types.logical.RowType;
 import org.apache.flink.types.RowKind;
 import org.apache.iceberg.flink.FlinkSchemaUtil;
 import org.apache.iceberg.io.TaskWriter;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,7 +49,7 @@ public class ContinuousSplitPlannerImplTest extends FlinkTestBase {
           LocalDate.of(2022, 1, 1),
           LocalTime.of(0, 0, 0, 0));
 
-  @Before
+  @BeforeEach
   public void init() throws IOException {
     //write base
     {

@@ -36,31 +36,32 @@ import org.apache.iceberg.flink.sink.TaskWriterFactory;
 import org.apache.iceberg.io.TaskWriter;
 import org.apache.iceberg.io.WriteResult;
 import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.util.List;
+import java.util.stream.Stream;
 
 import static com.netease.arctic.flink.table.descriptors.ArcticValidator.SUBMIT_EMPTY_SNAPSHOTS;
 
-@RunWith(Parameterized.class)
 public class ArcticFileWriterTest extends FlinkTestBase {
 
   public static final long TARGET_FILE_SIZE = 128 * 1024 * 1024;
   public ArcticTableLoader tableLoader;
-  private final boolean submitEmptySnapshots;
 
-  @Parameterized.Parameters(name = "submitEmptySnapshots = {0}")
-  public static Object[][] parameters() {
-    return new Object[][]{
-        {false},
-        {true}
-    };
+  @ParameterizedTest(name = "submitEmptySnapshots={0}")
+  @MethodSource("args")
+  @Retention(RetentionPolicy.RUNTIME)
+  private @interface TestArgs {
   }
 
-  public ArcticFileWriterTest(boolean submitEmptySnapshots) {
-    this.submitEmptySnapshots = submitEmptySnapshots;
+  static Stream<Arguments> args() {
+    return Stream.of(Arguments.of(false),
+        Arguments.of(true));
   }
 
   public static OneInputStreamOperatorTestHarness<RowData, WriteResult> createArcticStreamWriter(
@@ -141,8 +142,8 @@ public class ArcticFileWriterTest extends FlinkTestBase {
     }
   }
 
-  @Test
-  public void testFailover() throws Exception {
+  @TestArgs
+  public void testFailover(boolean submitEmptySnapshots) throws Exception {
     tableLoader = ArcticTableLoader.of(PK_TABLE_ID, catalogBuilder);
     long checkpointId = 1L;
 
@@ -311,9 +312,8 @@ public class ArcticFileWriterTest extends FlinkTestBase {
     }
   }
 
-  @Test
-  public void testEmitEmptyResults() throws Exception {
-
+  @TestArgs
+  public void testEmitEmptyResults(boolean submitEmptySnapshots) throws Exception {
     tableLoader = ArcticTableLoader.of(PK_TABLE_ID, catalogBuilder);
     long checkpointId = 1L;
     long excepted = submitEmptySnapshots ? 1 : 0;

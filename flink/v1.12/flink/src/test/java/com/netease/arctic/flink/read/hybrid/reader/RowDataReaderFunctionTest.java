@@ -19,6 +19,7 @@
 package com.netease.arctic.flink.read.hybrid.reader;
 
 import com.netease.arctic.data.DataFileType;
+import com.netease.arctic.flink.extension.MiniClusterExtension;
 import com.netease.arctic.flink.read.FlinkSplitPlanner;
 import com.netease.arctic.flink.read.hybrid.enumerator.ContinuousSplitPlannerImplTest;
 import com.netease.arctic.flink.read.hybrid.split.ArcticSplit;
@@ -26,7 +27,6 @@ import com.netease.arctic.flink.read.hybrid.split.ChangelogSplit;
 import com.netease.arctic.flink.read.source.DataIterator;
 import com.netease.arctic.scan.ArcticFileScanTask;
 import com.netease.arctic.scan.BaseArcticFileScanTask;
-import com.netease.arctic.table.ArcticTable;
 import com.netease.arctic.table.KeyedTable;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.table.data.GenericRowData;
@@ -39,7 +39,8 @@ import org.apache.iceberg.io.CloseableIterable;
 import org.apache.iceberg.io.CloseableIterator;
 import org.apache.iceberg.io.TaskWriter;
 import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,6 +54,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+@ExtendWith({MiniClusterExtension.class})
 public class RowDataReaderFunctionTest extends ContinuousSplitPlannerImplTest {
   private static final Logger LOG = LoggerFactory.getLogger(RowDataReaderFunctionTest.class);
   private static final AtomicInteger splitCount = new AtomicInteger();

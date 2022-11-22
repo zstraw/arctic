@@ -15,16 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.netease.arctic.flink.kafka.testutils;
+package com.netease.arctic.flink.kafka;
 
+import com.netease.arctic.flink.util.CommonTestUtils;
+import com.netease.arctic.flink.util.NetUtils;
 import kafka.metrics.KafkaMetricsReporter;
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServer;
 import org.apache.commons.collections.list.UnmodifiableList;
 import org.apache.commons.io.FileUtils;
 import org.apache.curator.test.TestingServer;
-import org.apache.flink.core.testutils.CommonTestUtils;
-import org.apache.flink.util.NetUtils;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.admin.TopicDescription;
@@ -36,6 +36,7 @@ import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.network.ListenerName;
 import org.apache.kafka.common.security.auth.SecurityProtocol;
 import org.apache.kafka.common.utils.Time;
+import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.collection.mutable.ArraySeq;
@@ -59,8 +60,6 @@ import java.util.concurrent.TimeoutException;
 import static java.nio.file.Files.createTempDirectory;
 import static java.nio.file.attribute.PosixFilePermissions.asFileAttribute;
 import static java.nio.file.attribute.PosixFilePermissions.fromString;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 /**
  * An implementation of the KafkaServerProvider.
@@ -107,7 +106,7 @@ public class KafkaTestEnvironmentImpl extends KafkaTestEnvironment {
     tmpKafkaDirs = new ArrayList<>(config.getKafkaServersNumber());
     for (int i = 0; i < config.getKafkaServersNumber(); i++) {
       File tmpDir = new File(tmpKafkaParent, "server-" + i);
-      assertTrue("cannot create kafka temp dir", tmpDir.mkdir());
+      Assert.assertTrue("cannot create kafka temp dir", tmpDir.mkdir());
       tmpKafkaDirs.add(tmpDir);
     }
 
@@ -172,7 +171,7 @@ public class KafkaTestEnvironmentImpl extends KafkaTestEnvironment {
       tryDelete(adminClient, topic);
     } catch (Exception e) {
       e.printStackTrace();
-      fail(String.format("Delete test topic : %s failed, %s", topic, e.getMessage()));
+      Assert.fail(String.format("Delete test topic : %s failed, %s", topic, e.getMessage()));
     } finally {
       adminClient.close(Duration.ofMillis(5000L));
       maybePrintDanglingThreadStacktrace(clientId);
@@ -214,7 +213,7 @@ public class KafkaTestEnvironmentImpl extends KafkaTestEnvironment {
       }
     } catch (Exception e) {
       e.printStackTrace();
-      fail("Create test topic : " + topic + " failed, " + e.getMessage());
+      Assert.fail("Create test topic : " + topic + " failed, " + e.getMessage());
     }
   }
 

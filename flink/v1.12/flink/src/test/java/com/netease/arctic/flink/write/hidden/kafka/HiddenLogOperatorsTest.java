@@ -18,7 +18,8 @@
 
 package com.netease.arctic.flink.write.hidden.kafka;
 
-import com.netease.arctic.flink.kafka.testutils.KafkaTestBase;
+import com.netease.arctic.flink.extension.KafkaExtension;
+import com.netease.arctic.flink.extension.MiniClusterExtension;
 import com.netease.arctic.flink.read.LogKafkaConsumer;
 import com.netease.arctic.flink.shuffle.LogRecordV1;
 import com.netease.arctic.flink.shuffle.ShuffleHelper;
@@ -51,11 +52,10 @@ import org.apache.flink.table.runtime.typeutils.InternalTypeInfo;
 import org.apache.flink.util.CloseableIterator;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.producer.ProducerConfig;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,28 +70,19 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
 
-import static com.netease.arctic.flink.kafka.testutils.KafkaConfigGenerate.getPropertiesWithByteArray;
+import static com.netease.arctic.flink.kafka.KafkaConfigGenerate.getPropertiesWithByteArray;
+import static com.netease.arctic.flink.extension.KafkaExtension.kafkaTestBase;
 import static com.netease.arctic.flink.table.descriptors.ArcticValidator.ARCTIC_LOG_CONSISTENCY_GUARANTEE_ENABLE;
 import static com.netease.arctic.table.TableProperties.LOG_STORE_MESSAGE_TOPIC;
 
 /**
  * Hidden log operator tests.
  */
+@ExtendWith({KafkaExtension.class, MiniClusterExtension.class})
 public class HiddenLogOperatorsTest extends BaseLogTest {
   private static final Logger LOG = LoggerFactory.getLogger(HiddenLogOperatorsTest.class);
   public static final String topic = "produce-consume-topic";
   public static final TestGlobalAggregateManager globalAggregateManger = new TestGlobalAggregateManager();
-  private static final KafkaTestBase kafkaTestBase = new KafkaTestBase();
-
-  @BeforeClass
-  public static void prepare() throws Exception {
-    kafkaTestBase.prepare();
-  }
-
-  @AfterClass
-  public static void shutdown() throws Exception {
-    kafkaTestBase.shutDownServices();
-  }
 
   @Test
   public void testProduceAndConsume() throws Exception {
@@ -121,7 +112,7 @@ public class HiddenLogOperatorsTest extends BaseLogTest {
     }
   }
 
-  @Ignore
+  @Disabled
   @Test
   public void testProducerFailoverWithoutRetract() throws Exception {
     String topic = "testProducerFailoverWithoutRetract";
@@ -168,7 +159,7 @@ public class HiddenLogOperatorsTest extends BaseLogTest {
     createConsumerWithoutRetract(true, 10, "test-gid", topic);
   }
 
-  @Ignore
+  @Disabled
   @Test
   public void testMultiParallelismFailoverConsistencyRead() throws Exception {
     String topic = "testMultiParallelismFailoverConsistencyRead";

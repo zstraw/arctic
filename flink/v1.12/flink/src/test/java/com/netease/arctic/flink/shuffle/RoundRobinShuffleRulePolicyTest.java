@@ -20,16 +20,19 @@ package com.netease.arctic.flink.shuffle;
 
 import com.netease.arctic.data.DataTreeNode;
 import com.netease.arctic.flink.FlinkTestBase;
+import com.netease.arctic.flink.extension.MiniClusterExtension;
 import org.apache.flink.api.common.functions.Partitioner;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.table.data.RowData;
 import org.apache.iceberg.relocated.com.google.common.collect.Sets;
 import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Map;
 import java.util.Set;
 
+@ExtendWith({MiniClusterExtension.class})
 public class RoundRobinShuffleRulePolicyTest extends FlinkTestBase {
 
   @Test

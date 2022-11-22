@@ -18,7 +18,8 @@
 
 package com.netease.arctic.flink.write.hidden.kafka;
 
-import com.netease.arctic.flink.kafka.testutils.KafkaTestBase;
+import com.netease.arctic.flink.extension.KafkaExtension;
+import com.netease.arctic.flink.extension.MiniClusterExtension;
 import com.netease.arctic.flink.shuffle.LogRecordV1;
 import com.netease.arctic.flink.write.hidden.LogMsgFactory;
 import com.netease.arctic.log.LogData;
@@ -26,10 +27,9 @@ import com.netease.arctic.log.LogDataJsonSerialization;
 import org.apache.flink.streaming.connectors.kafka.internals.FlinkKafkaInternalProducer;
 import org.apache.flink.table.data.RowData;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,26 +38,17 @@ import java.util.Properties;
 import java.util.UUID;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.netease.arctic.flink.kafka.testutils.KafkaConfigGenerate.getProperties;
-import static com.netease.arctic.flink.kafka.testutils.KafkaConfigGenerate.getPropertiesWithByteArray;
+import static com.netease.arctic.flink.kafka.KafkaConfigGenerate.getProperties;
+import static com.netease.arctic.flink.kafka.KafkaConfigGenerate.getPropertiesWithByteArray;
+import static com.netease.arctic.flink.extension.KafkaExtension.kafkaTestBase;
 import static org.apache.kafka.clients.producer.ProducerConfig.TRANSACTIONAL_ID_CONFIG;
 import static org.assertj.core.api.Assertions.assertThat;
 
+@ExtendWith({KafkaExtension.class, MiniClusterExtension.class})
 public class HiddenKafkaProducerTest extends BaseLogTest {
   private static final Logger LOG = LoggerFactory.getLogger(HiddenKafkaProducerTest.class);
-  private static final KafkaTestBase kafkaTestBase = new KafkaTestBase();
 
-  @BeforeClass
-  public static void prepare() throws Exception {
-    kafkaTestBase.prepare();
-  }
-
-  @AfterClass
-  public static void shutdown() throws Exception {
-    kafkaTestBase.shutDownServices();
-  }
-
-  @Ignore
+  @Disabled
   @Test
   public void testInitTransactionId() {
     final String topic = "test-init-transactions";

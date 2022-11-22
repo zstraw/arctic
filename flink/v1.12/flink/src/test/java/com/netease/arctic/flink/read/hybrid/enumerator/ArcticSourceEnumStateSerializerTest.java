@@ -18,6 +18,7 @@
 
 package com.netease.arctic.flink.read.hybrid.enumerator;
 
+import com.netease.arctic.flink.extension.MiniClusterExtension;
 import com.netease.arctic.flink.read.FlinkSplitPlanner;
 import com.netease.arctic.flink.read.hybrid.assigner.ShuffleSplitAssigner;
 import com.netease.arctic.flink.read.hybrid.assigner.ShuffleSplitAssignerTest;
@@ -25,7 +26,8 @@ import com.netease.arctic.flink.read.hybrid.split.ArcticSplit;
 import com.netease.arctic.flink.read.hybrid.split.TemporalJoinSplits;
 import org.apache.flink.api.connector.source.SplitEnumeratorContext;
 import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,6 +38,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
+@ExtendWith({MiniClusterExtension.class})
 public class ArcticSourceEnumStateSerializerTest extends ShuffleSplitAssignerTest {
   private final static Logger LOG = LoggerFactory.getLogger(ArcticSourceEnumStateSerializerTest.class);
 

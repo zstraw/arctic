@@ -68,6 +68,7 @@
         <zookeeper.version>3.7.1</zookeeper.version>
         <fastjson.version>1.2.75</fastjson.version>
         <parquet-avro.version>1.12.2</parquet-avro.version>
+        <junit-jupiter.version>5.8.2</junit-jupiter.version>
     </properties>
 
     <dependencyManagement>
@@ -294,6 +295,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
+                    <version>3.0.0-M7</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>

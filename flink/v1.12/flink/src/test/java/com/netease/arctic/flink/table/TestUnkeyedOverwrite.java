@@ -19,95 +19,76 @@
 package com.netease.arctic.flink.table;
 
 import com.netease.arctic.flink.FlinkTestBase;
+import com.netease.arctic.flink.extension.HMSExtension;
+import com.netease.arctic.flink.extension.MiniClusterExtension;
 import com.netease.arctic.flink.util.DataUtil;
 import com.netease.arctic.hive.HiveTableTestBase;
+import com.netease.arctic.utils.junit.BeforeAfterParameterResolver;
 import org.apache.flink.table.api.ApiExpression;
 import org.apache.flink.table.api.DataTypes;
 import org.apache.flink.table.api.Table;
-import org.apache.flink.test.util.MiniClusterWithClientResource;
-import org.apache.iceberg.flink.MiniClusterResource;
-import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collection;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.stream.Stream;
 
 import static com.netease.arctic.ams.api.MockArcticMetastoreServer.TEST_CATALOG_NAME;
 
-@RunWith(Parameterized.class)
+@ExtendWith({BeforeAfterParameterResolver.class, MiniClusterExtension.class, HMSExtension.class})
 public class TestUnkeyedOverwrite extends FlinkTestBase {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(TestUnkeyedOverwrite.class);
-
-  @Rule
-  public TemporaryFolder tempFolder = new TemporaryFolder();
-
-  @ClassRule
-  public static final MiniClusterWithClientResource MINI_CLUSTER_RESOURCE =
-      MiniClusterResource.createWithClassloaderCheckDisabled();
 
   private static final String TABLE = "test_unkeyed";
   private static final String DB = TABLE_ID.getDatabase();
 
   private String catalog;
   private String db;
-  private HiveTableTestBase hiveTableTestBase = new HiveTableTestBase();
 
-  @Parameterized.Parameter
-  public boolean isHive;
-
-  @Parameterized.Parameters(name = "isHive = {0}")
-  public static Collection<Boolean> parameters() {
-    return Arrays.asList(false);
+  @ParameterizedTest(name = "isHive={0}")
+  @MethodSource("isHive")
+  @Retention(RetentionPolicy.RUNTIME)
+  private @interface TestIsHive {
   }
 
-  @BeforeClass
-  public static void beforeClass() throws Exception {
-    HiveTableTestBase.startMetastore();
-    FlinkTestBase.prepare();
+  static Stream<Arguments> isHive() {
+    return Stream.of(Arguments.of(false));
   }
 
-  @AfterClass
-  public static void afterClass() throws Exception {
-    FlinkTestBase.shutdown();
-  }
-
-  public void before() throws Exception {
+  @BeforeEach
+  public void init(boolean isHive) throws Exception {
     if (isHive) {
       catalog = HiveTableTestBase.HIVE_CATALOG_NAME;
       db = HiveTableTestBase.HIVE_DB_NAME;
-      hiveTableTestBase.setupTables();
     } else {
       catalog = TEST_CATALOG_NAME;
       db = DB;
-      super.before();
     }
     super.config(catalog);
   }
 
-  @After
+  @AfterEach
   public void after() {
     sql("DROP TABLE IF EXISTS arcticCatalog." + db + "." + TABLE);
-    if (isHive) {
-      hiveTableTestBase.clearTable();
-    }
   }
 
-  @Test(timeout = 30000)
-  public void testInsertOverwrite() throws IOException {
+  @Timeout(30)
+  @TestIsHive
+  public void testInsertOverwrite(boolean isHive) throws IOException {
     List<Object[]> data = new LinkedList<>();
     data.add(new Object[]{1000004, "a"});
     data.add(new Object[]{1000015, "b"});
@@ -138,8 +119,8 @@ public class TestUnkeyedOverwrite extends FlinkTestBase {
             ") */"));
   }
 
-  @Test
-  public void testPartitionInsertOverwrite() throws IOException {
+  @TestIsHive
+  public void testPartitionInsertOverwrite(boolean isHive) throws IOException {
     List<Object[]> data = new LinkedList<>();
     data.add(new Object[]{1000004, "a", "2022-05-17"});
     data.add(new Object[]{1000015, "b", "2022-05-17"});

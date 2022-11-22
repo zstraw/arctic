@@ -19,7 +19,8 @@
 package com.netease.arctic.flink.write;
 
 import com.netease.arctic.flink.FlinkTestBase;
-import com.netease.arctic.flink.kafka.testutils.KafkaTestBase;
+import com.netease.arctic.flink.extension.KafkaExtension;
+import com.netease.arctic.flink.extension.MiniClusterExtension;
 import com.netease.arctic.flink.metric.MetricsGenerator;
 import com.netease.arctic.flink.shuffle.LogRecordV1;
 import com.netease.arctic.flink.shuffle.ShuffleHelper;
@@ -48,18 +49,19 @@ import org.apache.iceberg.io.WriteResult;
 import org.apache.iceberg.types.TypeUtil;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.producer.ProducerConfig;
-import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -72,56 +74,43 @@ import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-import static com.netease.arctic.flink.kafka.testutils.KafkaConfigGenerate.getPropertiesWithByteArray;
+import static com.netease.arctic.flink.kafka.KafkaConfigGenerate.getPropertiesWithByteArray;
+import static com.netease.arctic.flink.extension.KafkaExtension.kafkaTestBase;
 import static com.netease.arctic.flink.table.descriptors.ArcticValidator.LOG_STORE_CATCH_UP;
 import static com.netease.arctic.table.TableProperties.ENABLE_LOG_STORE;
 import static com.netease.arctic.table.TableProperties.LOG_STORE_ADDRESS;
 import static com.netease.arctic.table.TableProperties.LOG_STORE_MESSAGE_TOPIC;
 
-@RunWith(Parameterized.class)
+@ExtendWith({KafkaExtension.class, MiniClusterExtension.class})
 public class AutomaticLogWriterTest extends FlinkTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(AutomaticLogWriterTest.class);
   public ArcticTableLoader tableLoader;
   public static final TestGlobalAggregateManager globalAggregateManger = new TestGlobalAggregateManager();
-  private static final KafkaTestBase kafkaTestBase = new KafkaTestBase();
 
-  private final boolean isGapNone;
-  private final boolean logstoreEnabled;
-
-  public AutomaticLogWriterTest(boolean isGapNone, boolean logstoreEnabled) {
-    this.isGapNone = isGapNone;
-    this.logstoreEnabled = logstoreEnabled;
+  @ParameterizedTest(name = "isGapNone={0}, logstoreEnabled={1}")
+  @MethodSource("args")
+  @Retention(RetentionPolicy.RUNTIME)
+  private @interface TestArgs {
   }
 
-  @Parameterized.Parameters(name = "isGapNone={0}, logstoreEnabled={1}")
-  public static Object[][] parameters() {
-    return new Object[][]{
-        {true, true},
-        {false, false},
-        {false, true},
-        {true, false}
-    };
+  static Stream<Arguments> args() {
+    return Stream.of(Arguments.of(true, true),
+        Arguments.of(false, false),
+        Arguments.of(true, false),
+        Arguments.of(false, true));
   }
 
-  @BeforeClass
-  public static void prepare() throws Exception {
-    kafkaTestBase.prepare();
-  }
 
-  @AfterClass
-  public static void shutdown() throws Exception {
-    kafkaTestBase.shutDownServices();
-  }
-
-  @Before
+  @BeforeEach
   public void init() {
     tableLoader = ArcticTableLoader.of(PK_TABLE_ID, catalogBuilder);
     tableLoader.open();
   }
 
-  @Test
-  public void testHasCaughtUp() throws Exception {
+  @TestArgs
+  public void testHasCaughtUp(boolean isGapNone, boolean logstoreEnabled) throws Exception {
     String topic = Thread.currentThread().getStackTrace()[1].getMethodName() + isGapNone + logstoreEnabled;
 
     final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
@@ -179,8 +168,8 @@ public class AutomaticLogWriterTest extends FlinkTestBase {
     }
   }
 
-  @Test
-  public void testHasNotCaughtUp() throws Exception {
+  @TestArgs
+  public void testHasNotCaughtUp(boolean isGapNone, boolean logstoreEnabled) throws Exception {
     String topic = Thread.currentThread().getStackTrace()[1].getMethodName() + isGapNone + logstoreEnabled;
     byte[] jobId = IdGenerator.generateUpstreamId();
     Duration gap;

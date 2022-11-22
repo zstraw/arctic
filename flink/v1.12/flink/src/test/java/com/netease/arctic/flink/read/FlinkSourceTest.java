@@ -19,6 +19,7 @@
 package com.netease.arctic.flink.read;
 
 import com.netease.arctic.flink.FlinkTestBase;
+import com.netease.arctic.flink.extension.MiniClusterExtension;
 import com.netease.arctic.flink.table.ArcticTableLoader;
 import com.netease.arctic.flink.util.DataUtil;
 import org.apache.flink.configuration.Configuration;
@@ -40,7 +41,8 @@ import org.apache.iceberg.Table;
 import org.apache.iceberg.io.TaskWriter;
 import org.apache.iceberg.io.WriteResult;
 import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -56,6 +58,7 @@ import java.util.Set;
 import static com.netease.arctic.flink.write.ArcticFileWriterTest.TARGET_FILE_SIZE;
 import static com.netease.arctic.flink.write.ArcticFileWriterTest.createUnkeyedTaskWriter;
 
+@ExtendWith({MiniClusterExtension.class})
 public class FlinkSourceTest extends FlinkTestBase {
 
   protected static final FileFormat fileFormat = FileFormat.valueOf("parquet".toUpperCase(Locale.ENGLISH));
