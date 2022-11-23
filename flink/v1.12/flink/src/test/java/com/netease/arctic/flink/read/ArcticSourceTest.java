@@ -68,6 +68,7 @@ import org.junit.Assert;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -95,6 +96,7 @@ import static com.netease.arctic.flink.table.descriptors.ArcticValidator.SCAN_ST
 import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
+@Order(Integer.MAX_VALUE)
 @ExtendWith({MiniClusterHaExtension.class})
 public class ArcticSourceTest extends RowDataReaderFunctionTest implements Serializable {
   private static final Logger LOG = LoggerFactory.getLogger(ArcticSourceTest.class);
