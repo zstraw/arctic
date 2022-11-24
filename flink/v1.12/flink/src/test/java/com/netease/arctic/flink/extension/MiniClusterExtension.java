@@ -28,11 +28,11 @@ public class MiniClusterExtension implements BeforeAllCallback, ExtensionContext
 
   @Override
   public void beforeAll(ExtensionContext extensionContext) throws Exception {
-//    MINI_CLUSTER.before();
+    MINI_CLUSTER.before();
   }
 
   @Override
   public void close() throws Throwable {
-//    MINI_CLUSTER.after();
+    MINI_CLUSTER.after();
   }
 }

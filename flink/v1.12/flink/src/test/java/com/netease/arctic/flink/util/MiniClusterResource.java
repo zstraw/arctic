@@ -19,21 +19,16 @@
 package com.netease.arctic.flink.util;
 
 import org.apache.flink.test.util.MiniClusterWithClientResource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MiniClusterResource {
-  
-  private static final Logger LOG = LoggerFactory.getLogger(MiniClusterResource.class);
   
   public static MiniClusterWithClientResource MINI_CLUSTER_RESOURCE =
       org.apache.iceberg.flink.MiniClusterResource.createWithClassloaderCheckDisabled();
   public static AtomicBoolean start = new AtomicBoolean(false);
 
   public void before() throws Exception {
-    LOG.info("minicluster start :{}", start);
     if (!start.getAndSet(true)) {
       MINI_CLUSTER_RESOURCE.before();
     }

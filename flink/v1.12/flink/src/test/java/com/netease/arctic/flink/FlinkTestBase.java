@@ -20,6 +20,7 @@ package com.netease.arctic.flink;
 
 import com.netease.arctic.TableTestBase;
 import com.netease.arctic.flink.catalog.descriptors.ArcticCatalogValidator;
+import com.netease.arctic.flink.extension.MiniClusterExtension;
 import com.netease.arctic.flink.write.ArcticRowDataTaskWriterFactory;
 import com.netease.arctic.io.reader.GenericArcticDataReader;
 import com.netease.arctic.scan.CombinedScanTask;
@@ -35,6 +36,7 @@ import org.apache.flink.runtime.state.filesystem.FsStateBackend;
 import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.environment.CheckpointConfig;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.streaming.util.TestStreamEnvironment;
 import org.apache.flink.table.api.DataTypes;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.TableEnvironment;
@@ -175,17 +177,18 @@ public class FlinkTestBase extends TableTestBase {
     if (env == null) {
       synchronized (this) {
         if (env == null) {
-          StateBackend backend = new FsStateBackend(
-              "file:///" + System.getProperty("java.io.tmpdir") + "/flink/backend");
-          env =
-              StreamExecutionEnvironment.getExecutionEnvironment(MiniClusterResource.DISABLE_CLASSLOADER_CHECK_CONFIG);
-          env.setParallelism(1);
-          env.getCheckpointConfig().setCheckpointingMode(CheckpointingMode.EXACTLY_ONCE);
-          env.getCheckpointConfig().setCheckpointInterval(300);
-          env.getCheckpointConfig().enableExternalizedCheckpoints(
-              CheckpointConfig.ExternalizedCheckpointCleanup.RETAIN_ON_CANCELLATION);
-          env.setStateBackend(backend);
-          env.setRestartStrategy(RestartStrategies.noRestart());
+//          StateBackend backend = new FsStateBackend(
+//              "file:///" + System.getProperty("java.io.tmpdir") + "/flink/backend");
+//          env =
+//              StreamExecutionEnvironment.getExecutionEnvironment(MiniClusterResource.DISABLE_CLASSLOADER_CHECK_CONFIG);
+//          env.setParallelism(1);
+//          env.getCheckpointConfig().setCheckpointingMode(CheckpointingMode.EXACTLY_ONCE);
+//          env.getCheckpointConfig().setCheckpointInterval(300);
+//          env.getCheckpointConfig().enableExternalizedCheckpoints(
+//              CheckpointConfig.ExternalizedCheckpointCleanup.RETAIN_ON_CANCELLATION);
+//          env.setStateBackend(backend);
+//          env.setRestartStrategy(RestartStrategies.noRestart());
+          env = new TestStreamEnvironment(MiniClusterExtension.MINI_CLUSTER.MINI_CLUSTER_RESOURCE.getMiniCluster(), 1);
         }
       }
     }

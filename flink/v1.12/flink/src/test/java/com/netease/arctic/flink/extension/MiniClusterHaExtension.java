@@ -39,11 +39,11 @@ public class MiniClusterHaExtension implements BeforeEachCallback, AfterEachCall
   
   @Override
   public void afterEach(ExtensionContext context) throws Exception {
-//    MINI_CLUSTER_RESOURCE.after();
+    MINI_CLUSTER_RESOURCE.after();
   }
 
   @Override
   public void beforeEach(ExtensionContext context) throws Exception {
-//    MINI_CLUSTER_RESOURCE.before();
+    MINI_CLUSTER_RESOURCE.before();
   }
 }
