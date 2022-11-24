@@ -20,7 +20,7 @@ package com.netease.arctic.flink;
 
 import com.netease.arctic.TableTestBase;
 import com.netease.arctic.flink.catalog.descriptors.ArcticCatalogValidator;
-import com.netease.arctic.flink.kafka.testutils.KafkaTestBase;
+import com.netease.arctic.flink.extension.MiniClusterExtension;
 import com.netease.arctic.flink.write.ArcticRowDataTaskWriterFactory;
 import com.netease.arctic.io.reader.GenericArcticDataReader;
 import com.netease.arctic.scan.CombinedScanTask;
@@ -36,6 +36,7 @@ import org.apache.flink.runtime.state.filesystem.FsStateBackend;
 import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.environment.CheckpointConfig;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.streaming.util.TestStreamEnvironment;
 import org.apache.flink.table.api.DataTypes;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.TableEnvironment;
@@ -47,7 +48,6 @@ import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.data.StringData;
 import org.apache.flink.table.data.TimestampData;
 import org.apache.flink.table.types.logical.RowType;
-import org.apache.flink.test.util.MiniClusterWithClientResource;
 import org.apache.flink.types.Row;
 import org.apache.flink.types.RowKind;
 import org.apache.flink.util.CloseableIterator;
@@ -65,8 +65,7 @@ import org.apache.iceberg.relocated.com.google.common.collect.ImmutableMap;
 import org.apache.iceberg.relocated.com.google.common.collect.ImmutableSet;
 import org.apache.iceberg.relocated.com.google.common.collect.Lists;
 import org.apache.iceberg.relocated.com.google.common.collect.Maps;
-import org.junit.After;
-import org.junit.ClassRule;
+import org.junit.jupiter.api.AfterEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -85,10 +84,6 @@ import static org.apache.flink.table.api.config.TableConfigOptions.TABLE_DYNAMIC
 public class FlinkTestBase extends TableTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(FlinkTestBase.class);
 
-  @ClassRule
-  public static final MiniClusterWithClientResource MINI_CLUSTER_RESOURCE =
-      MiniClusterResource.createWithClassloaderCheckDisabled();
-  
   public static boolean IS_LOCAL = true;
   public static String METASTORE_URL = "thrift://127.0.0.1:" + AMS.port();
 
@@ -116,7 +111,6 @@ public class FlinkTestBase extends TableTestBase {
   protected static UnkeyedTable testPartitionTable;
 
   public static InternalCatalogBuilder catalogBuilder;
-  public static final KafkaTestBase kafkaTestBase = new KafkaTestBase();
 
   public void before() throws Exception {
     if (IS_LOCAL) {
@@ -139,7 +133,7 @@ public class FlinkTestBase extends TableTestBase {
     }
   }
 
-  @After
+  @AfterEach
   public void clean() {
     LOG.info("clean start");
     if (IS_LOCAL && testCatalog != null) {
@@ -160,14 +154,6 @@ public class FlinkTestBase extends TableTestBase {
     props = Maps.newHashMap();
     props.put("type", ArcticCatalogValidator.CATALOG_TYPE_VALUE_ARCTIC);
     props.put(ArcticCatalogValidator.METASTORE_URL, metastoreUrl + "/" + catalog);
-  }
-
-  public static void prepare() throws Exception {
-    kafkaTestBase.prepare();
-  }
-
-  public static void shutdown() throws Exception {
-    kafkaTestBase.shutDownServices();
   }
 
   protected StreamTableEnvironment getTableEnv() {
@@ -191,17 +177,18 @@ public class FlinkTestBase extends TableTestBase {
     if (env == null) {
       synchronized (this) {
         if (env == null) {
-          StateBackend backend = new FsStateBackend(
-              "file:///" + System.getProperty("java.io.tmpdir") + "/flink/backend");
-          env =
-              StreamExecutionEnvironment.getExecutionEnvironment(MiniClusterResource.DISABLE_CLASSLOADER_CHECK_CONFIG);
-          env.setParallelism(1);
-          env.getCheckpointConfig().setCheckpointingMode(CheckpointingMode.EXACTLY_ONCE);
-          env.getCheckpointConfig().setCheckpointInterval(300);
-          env.getCheckpointConfig().enableExternalizedCheckpoints(
-              CheckpointConfig.ExternalizedCheckpointCleanup.RETAIN_ON_CANCELLATION);
-          env.setStateBackend(backend);
-          env.setRestartStrategy(RestartStrategies.noRestart());
+//          StateBackend backend = new FsStateBackend(
+//              "file:///" + System.getProperty("java.io.tmpdir") + "/flink/backend");
+//          env =
+//              StreamExecutionEnvironment.getExecutionEnvironment(MiniClusterResource.DISABLE_CLASSLOADER_CHECK_CONFIG);
+//          env.setParallelism(1);
+//          env.getCheckpointConfig().setCheckpointingMode(CheckpointingMode.EXACTLY_ONCE);
+//          env.getCheckpointConfig().setCheckpointInterval(300);
+//          env.getCheckpointConfig().enableExternalizedCheckpoints(
+//              CheckpointConfig.ExternalizedCheckpointCleanup.RETAIN_ON_CANCELLATION);
+//          env.setStateBackend(backend);
+//          env.setRestartStrategy(RestartStrategies.noRestart());
+          env = new TestStreamEnvironment(MiniClusterExtension.MINI_CLUSTER.MINI_CLUSTER_RESOURCE.getMiniCluster(), 1);
         }
       }
     }

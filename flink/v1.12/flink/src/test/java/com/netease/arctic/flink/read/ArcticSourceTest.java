@@ -19,6 +19,7 @@
 package com.netease.arctic.flink.read;
 
 import com.netease.arctic.catalog.CatalogLoader;
+import com.netease.arctic.flink.extension.MiniClusterHaExtension;
 import com.netease.arctic.flink.read.hybrid.reader.ReaderFunction;
 import com.netease.arctic.flink.read.hybrid.reader.RowDataReaderFunction;
 import com.netease.arctic.flink.read.hybrid.reader.RowDataReaderFunctionTest;
@@ -41,8 +42,6 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.execution.JobClient;
 import org.apache.flink.runtime.highavailability.nonha.embedded.HaLeadershipControl;
 import org.apache.flink.runtime.minicluster.MiniCluster;
-import org.apache.flink.runtime.minicluster.RpcServiceSharing;
-import org.apache.flink.runtime.testutils.MiniClusterResourceConfiguration;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.datastream.DataStreamUtils;
@@ -58,7 +57,6 @@ import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.data.StringData;
 import org.apache.flink.table.data.TimestampData;
 import org.apache.flink.table.runtime.typeutils.InternalTypeInfo;
-import org.apache.flink.test.util.MiniClusterWithClientResource;
 import org.apache.flink.types.RowKind;
 import org.apache.flink.util.CloseableIterator;
 import org.apache.iceberg.Schema;
@@ -66,12 +64,14 @@ import org.apache.iceberg.flink.FlinkSchemaUtil;
 import org.apache.iceberg.io.TaskWriter;
 import org.apache.iceberg.types.TypeUtil;
 import org.apache.iceberg.types.Types;
-import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -89,32 +89,25 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.netease.arctic.ams.api.MockArcticMetastoreServer.TEST_CATALOG_NAME;
 import static com.netease.arctic.ams.api.MockArcticMetastoreServer.TEST_DB_NAME;
+import static com.netease.arctic.flink.extension.MiniClusterHaExtension.MINI_CLUSTER_RESOURCE;
+import static com.netease.arctic.flink.extension.MiniClusterHaExtension.PARALLELISM;
 import static com.netease.arctic.flink.table.descriptors.ArcticValidator.SCAN_STARTUP_MODE_EARLIEST;
 import static com.netease.arctic.flink.table.descriptors.ArcticValidator.SCAN_STARTUP_MODE_LATEST;
 import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
+@Order(Integer.MAX_VALUE)
+@ExtendWith({MiniClusterHaExtension.class})
 public class ArcticSourceTest extends RowDataReaderFunctionTest implements Serializable {
   private static final Logger LOG = LoggerFactory.getLogger(ArcticSourceTest.class);
   private static final long serialVersionUID = 7418812854449034756L;
-  private static final int PARALLELISM = 4;
-
-  @Rule
-  public final MiniClusterWithClientResource miniClusterResource =
-      new MiniClusterWithClientResource(
-          new MiniClusterResourceConfiguration.Builder()
-              .setNumberTaskManagers(1)
-              .setNumberSlotsPerTaskManager(PARALLELISM)
-              .setRpcServiceSharing(RpcServiceSharing.DEDICATED)
-              .withHaLeadershipControl()
-              .build());
 
   protected KeyedTable testFailoverTable;
   protected static final String sinkTableName = "test_sink_exactly_once";
   protected static final TableIdentifier FAIL_TABLE_ID =
       TableIdentifier.of(TEST_CATALOG_NAME, TEST_DB_NAME, sinkTableName);
 
-  @Before
+  @BeforeEach
   public void testSetup() throws IOException {
     testCatalog = CatalogLoader.load(AMS.getUrl());
 
@@ -133,7 +126,7 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     }
   }
 
-  @After
+  @AfterEach
   public void dropTable() {
     testCatalog.dropTable(FAIL_TABLE_ID, true);
   }
@@ -162,13 +155,15 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     assertArrayEquals(excepts(), actualResult);
   }
 
-  @Ignore
+  @Disabled
+  @Timeout(60)
   @Test
   public void testArcticSourceStaticJobManagerFailover() throws Exception {
     testArcticSource(FailoverType.JM);
   }
 
-  @Ignore
+  @Disabled
+  @Timeout(60)
   @Test
   public void testArcticSourceStaticTaskManagerFailover() throws Exception {
     testArcticSource(FailoverType.TM);
@@ -213,12 +208,13 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
         failoverType,
         jobId,
         RecordCounterToFail::continueProcessing,
-        miniClusterResource.getMiniCluster());
+        MINI_CLUSTER_RESOURCE.getMiniCluster());
 
-    assertRecords(testFailoverTable, expected, Duration.ofMillis(10), 12000);
+    assertRecords(testFailoverTable, expected, Duration.ofSeconds(2), 12000);
   }
 
-  @Test(timeout = 30000)
+  @Timeout(30)
+  @Test
   public void testDimTaskManagerFailover() throws Exception {
     List<RowData> updated = updateRecords();
     writeUpdate(updated);
@@ -247,7 +243,7 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
         FailoverType.TM,
         jobId,
         WatermarkAwareFailWrapper::continueProcessing,
-        miniClusterResource.getMiniCluster());
+        MINI_CLUSTER_RESOURCE.getMiniCluster());
 
     while (WatermarkAwareFailWrapper.watermarkCounter.get() != PARALLELISM) {
       Thread.sleep(1000);
@@ -279,7 +275,8 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     jobClient.cancel();
   }
 
-  @Test(timeout = 30000)
+  @Timeout(30)
+  @Test
   public void testArcticContinuousSourceWithEmptyChangeInInit() throws Exception {
     TableIdentifier tableId = TableIdentifier.of(TEST_CATALOG_NAME, TEST_DB_NAME, "test_empty_change");
     KeyedTable table = testCatalog
@@ -354,13 +351,15 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     jobClient.cancel();
   }
 
-  @Ignore
+  @Disabled
+  @Timeout(60)
   @Test
   public void testArcticContinuousSourceJobManagerFailover() throws Exception {
     testArcticContinuousSource(FailoverType.JM);
   }
 
-  @Ignore
+  @Disabled
+  @Timeout(60)
   @Test
   public void testArcticContinuousSourceTaskManagerFailover() throws Exception {
     testArcticContinuousSource(FailoverType.TM);
@@ -400,13 +399,13 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
       writeUpdate(records);
       if (i == 2) {
         triggerFailover(failoverType, jobId, () -> {
-        }, miniClusterResource.getMiniCluster());
+        }, MINI_CLUSTER_RESOURCE.getMiniCluster());
       }
     }
 
     // wait longer for continuous source to reduce flakiness
     // because CI servers tend to be overloaded.
-    assertRecords(testFailoverTable, expected, Duration.ofMillis(10), 12000);
+    assertRecords(testFailoverTable, expected, Duration.ofSeconds(2), 12000);
     jobClient.cancel();
   }
 

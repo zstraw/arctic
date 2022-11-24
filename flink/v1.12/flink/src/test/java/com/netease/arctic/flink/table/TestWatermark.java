@@ -44,11 +44,10 @@ import org.apache.flink.types.Row;
 import org.apache.flink.types.RowKind;
 import org.apache.flink.util.CloseableIterator;
 import org.apache.iceberg.io.TaskWriter;
-import org.junit.After;
 import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,9 +68,6 @@ import static com.netease.arctic.table.TableProperties.LOCATION;
 public class TestWatermark extends FlinkTestBase {
   public static final Logger LOG = LoggerFactory.getLogger(TestJoin.class);
 
-  @Rule
-  public TemporaryFolder tempFolder = new TemporaryFolder();
-
   private static final String DB = PK_TABLE_ID.getDatabase();
   private static final String TABLE = "test_keyed";
 
@@ -80,12 +76,13 @@ public class TestWatermark extends FlinkTestBase {
     super.config(TEST_CATALOG_NAME);
   }
 
-  @After
+  @AfterEach
   public void after() {
     sql("DROP TABLE IF EXISTS arcticCatalog." + DB + "." + TABLE);
   }
 
-  @Test(timeout = 30000)
+  @Timeout(30)
+  @Test
   public void testWatermark() throws Exception {
     sql(String.format("CREATE CATALOG arcticCatalog WITH %s", toWithClause(props)));
     Map<String, String> tableProperties = new HashMap<>();

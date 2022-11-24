@@ -19,23 +19,21 @@
 package com.netease.arctic.flink.catalog;
 
 import com.netease.arctic.flink.FlinkTestBase;
+import com.netease.arctic.flink.extension.MiniClusterExtension;
 import com.netease.arctic.table.TableIdentifier;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.CollectionUtil;
 import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 import java.util.List;
 
 import static com.netease.arctic.ams.api.MockArcticMetastoreServer.TEST_CATALOG_NAME;
 
+@ExtendWith({MiniClusterExtension.class})
 public class TestCatalog extends FlinkTestBase {
-
-  @Rule
-  public TemporaryFolder tempFolder = new TemporaryFolder();
 
   private static final String DB = PK_TABLE_ID.getDatabase();
   private static final String TABLE = "test_keyed";

@@ -19,16 +19,19 @@
 package com.netease.arctic.flink.read;
 
 
+import com.netease.arctic.flink.extension.MiniClusterExtension;
 import com.netease.arctic.flink.read.hybrid.reader.RowDataReaderFunctionTest;
 import com.netease.arctic.flink.read.hybrid.split.ArcticSplit;
 import org.apache.iceberg.TableScan;
 import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+@ExtendWith({MiniClusterExtension.class})
 public class FlinkSplitPlannerTest extends RowDataReaderFunctionTest {
 
   @Test

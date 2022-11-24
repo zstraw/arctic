@@ -19,6 +19,7 @@
 package com.netease.arctic.flink.read.hybrid.assigner;
 
 import com.netease.arctic.data.DataTreeNode;
+import com.netease.arctic.flink.extension.MiniClusterExtension;
 import com.netease.arctic.flink.read.FlinkSplitPlanner;
 import com.netease.arctic.flink.read.hybrid.reader.RowDataReaderFunctionTest;
 import com.netease.arctic.flink.read.hybrid.split.ArcticSplit;
@@ -28,7 +29,8 @@ import org.apache.flink.api.connector.source.SplitEnumeratorContext;
 import org.apache.flink.api.connector.source.SplitsAssignment;
 import org.apache.flink.metrics.MetricGroup;
 import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,6 +42,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 
+@ExtendWith({MiniClusterExtension.class})
 public class ShuffleSplitAssignerTest extends RowDataReaderFunctionTest {
   private static final Logger LOG = LoggerFactory.getLogger(ShuffleSplitAssignerTest.class);
 

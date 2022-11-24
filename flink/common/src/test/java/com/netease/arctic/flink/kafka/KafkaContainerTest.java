@@ -16,8 +16,9 @@
  * limitations under the License.
  */
 
-package com.netease.arctic.flink.kafka.testutils;
+package com.netease.arctic.flink.kafka;
 
+import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -39,10 +40,9 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.stream.Collectors;
 
-import static com.netease.arctic.flink.kafka.testutils.KafkaConfigGenerate.getProperties;
-import static com.netease.arctic.flink.kafka.testutils.KafkaConfigGenerate.getPropertiesWithByteArray;
-import static com.netease.arctic.flink.kafka.testutils.KafkaUtil.createKafkaContainer;
-import static org.apache.kafka.clients.CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG;
+import static com.netease.arctic.flink.kafka.KafkaConfigGenerate.getProperties;
+import static com.netease.arctic.flink.kafka.KafkaConfigGenerate.getPropertiesWithByteArray;
+import static com.netease.arctic.flink.kafka.KafkaUtil.createKafkaContainer;
 
 @Testcontainers
 public interface KafkaContainerTest {
@@ -91,7 +91,7 @@ public interface KafkaContainerTest {
             .map(topic -> new NewTopic(topic, numPartitions, (short) 1))
             .collect(Collectors.toList());
     Map<String, Object> params = new HashMap<>();
-    params.put(BOOTSTRAP_SERVERS_CONFIG, KAFKA_CONTAINER.getBootstrapServers());
+    params.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, KAFKA_CONTAINER.getBootstrapServers());
     try (AdminClient admin = AdminClient.create(params)) {
       admin.createTopics(newTopics);
     }
@@ -99,7 +99,7 @@ public interface KafkaContainerTest {
 
   default void deleteTopics(String... topics) {
     Map<String, Object> params = new HashMap<>();
-    params.put(BOOTSTRAP_SERVERS_CONFIG, KAFKA_CONTAINER.getBootstrapServers());
+    params.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, KAFKA_CONTAINER.getBootstrapServers());
     try (AdminClient admin = AdminClient.create(params)) {
       admin.deleteTopics(Arrays.asList(topics));
     }

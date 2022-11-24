@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package com.netease.arctic.flink.kafka.testutils;
+package com.netease.arctic.flink.kafka;
 
 /**
  * Exception that is thrown to terminate a program and indicate success.

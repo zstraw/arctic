@@ -19,10 +19,14 @@
 package com.netease.arctic.flink.table;
 
 import com.netease.arctic.flink.FlinkTestBase;
+import com.netease.arctic.flink.extension.HMSExtension;
+import com.netease.arctic.flink.extension.KafkaExtension;
+import com.netease.arctic.flink.extension.MiniClusterExtension;
 import com.netease.arctic.flink.util.DataUtil;
 import com.netease.arctic.flink.util.TestUtil;
 import com.netease.arctic.hive.HiveTableTestBase;
 import com.netease.arctic.table.TableProperties;
+import com.netease.arctic.utils.junit.BeforeAfterParameterResolver;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.table.api.ApiExpression;
@@ -34,40 +38,37 @@ import org.apache.flink.table.runtime.typeutils.InternalTypeInfo;
 import org.apache.flink.types.Row;
 import org.apache.flink.types.RowKind;
 import org.apache.flink.util.CloseableIterator;
-import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import static com.netease.arctic.ams.api.MockArcticMetastoreServer.TEST_CATALOG_NAME;
+import static com.netease.arctic.flink.extension.KafkaExtension.kafkaTestBase;
 import static com.netease.arctic.table.TableProperties.ENABLE_LOG_STORE;
 import static com.netease.arctic.table.TableProperties.LOCATION;
 import static com.netease.arctic.table.TableProperties.LOG_STORE_ADDRESS;
 import static com.netease.arctic.table.TableProperties.LOG_STORE_MESSAGE_TOPIC;
 import static org.apache.flink.table.api.Expressions.$;
 
-@RunWith(Parameterized.class)
+@ExtendWith({BeforeAfterParameterResolver.class, KafkaExtension.class, MiniClusterExtension.class/*, HMSExtension.class*/})
 public class TestKeyed extends FlinkTestBase {
-
-  @Rule
-  public TemporaryFolder tempFolder = new TemporaryFolder();
 
   private static final String DB = PK_TABLE_ID.getDatabase();
   private static final String TABLE = "test_keyed";
@@ -75,51 +76,37 @@ public class TestKeyed extends FlinkTestBase {
   private String catalog;
   private String db;
   private String topic;
-  private HiveTableTestBase hiveTableTestBase = new HiveTableTestBase();
 
-  @Parameterized.Parameter
-  public boolean isHive;
-
-  @Parameterized.Parameters(name = "isHive = {0}")
-  public static Collection<Boolean> parameters() {
-    return Arrays.asList(false);
+  @ParameterizedTest(name = "isHive={0}")
+  @MethodSource("isHive")
+  @Retention(RetentionPolicy.RUNTIME)
+  private @interface TestIsHive {
   }
 
-  @BeforeClass
-  public static void beforeClass() throws Exception {
-    HiveTableTestBase.startMetastore();
-    FlinkTestBase.prepare();
+  static Stream<Arguments> isHive() {
+    return Stream.of(Arguments.of(false));
   }
 
-  @AfterClass
-  public static void afterClass() throws Exception {
-    FlinkTestBase.shutdown();
-  }
-
-  public void before() throws Exception {
+  @BeforeEach
+  public void init(boolean isHive) throws Exception {
     if (isHive) {
       catalog = HiveTableTestBase.HIVE_CATALOG_NAME;
       db = HiveTableTestBase.HIVE_DB_NAME;
-      hiveTableTestBase.setupTables();
     } else {
       catalog = TEST_CATALOG_NAME;
       db = DB;
-      super.before();
     }
     topic = String.join(".", catalog, db, TABLE);
     super.config(catalog);
   }
 
-  @After
+  @AfterEach
   public void after() {
     sql("DROP TABLE IF EXISTS arcticCatalog." + db + "." + TABLE);
-    if (isHive) {
-      hiveTableTestBase.clearTable();
-    }
   }
 
-  @Test
-  public void testSinkSourceFile() throws IOException {
+  @TestIsHive
+  public void testSinkSourceFile(boolean isHive) throws IOException {
     List<Object[]> data = new LinkedList<>();
     data.add(new Object[]{RowKind.INSERT, 1000004, "a", LocalDateTime.parse("2022-06-17T10:10:11.0"),
         LocalDateTime.parse("2022-06-17T10:10:11.0").atZone(ZoneId.systemDefault()).toInstant()});
@@ -185,8 +172,8 @@ public class TestKeyed extends FlinkTestBase {
     Assert.assertTrue(CollectionUtils.isEqualCollection(DataUtil.toRowList(expected), actual));
   }
 
-  @Test
-  public void testUnpartitionLogSinkSource() throws Exception {
+  @TestIsHive
+  public void testUnpartitionLogSinkSource(boolean isHive) throws Exception {
     String topic = this.topic + "testUnpartitionLogSinkSource";
     kafkaTestBase.createTopics(KAFKA_PARTITION_NUMS, topic);
 
@@ -242,8 +229,8 @@ public class TestKeyed extends FlinkTestBase {
     result.getJobClient().ifPresent(TestUtil::cancelJob);
   }
 
-  @Test
-  public void testUnPartitionDoubleSink() throws Exception {
+  @TestIsHive
+  public void testUnPartitionDoubleSink(boolean isHive) throws Exception {
     String topic = this.topic + "testUnPartitionDoubleSink";
     kafkaTestBase.createTopics(KAFKA_PARTITION_NUMS, topic);
 
@@ -295,8 +282,8 @@ public class TestKeyed extends FlinkTestBase {
     result.getJobClient().ifPresent(TestUtil::cancelJob);
   }
 
-  @Test
-  public void testPartitionSinkFile() throws IOException {
+  @TestIsHive
+  public void testPartitionSinkFile(boolean isHive) throws IOException {
     List<Object[]> data = new LinkedList<>();
     data.add(new Object[]{1000004, "a", LocalDateTime.parse("2022-06-17T10:10:11.0")});
     data.add(new Object[]{1000015, "b", LocalDateTime.parse("2022-06-17T10:10:11.0")});
@@ -333,8 +320,8 @@ public class TestKeyed extends FlinkTestBase {
             ") */")));
   }
 
-  @Test
-  public void testFileUpsert() throws IOException {
+  @TestIsHive
+  public void testFileUpsert(boolean isHive) throws IOException {
     List<Object[]> data = new LinkedList<>();
     data.add(new Object[]{RowKind.INSERT, 1000004, "a", LocalDateTime.parse("2022-06-17T10:10:11.0")});
     data.add(new Object[]{RowKind.DELETE, 1000015, "b", LocalDateTime.parse("2022-06-17T10:08:11.0")});
@@ -379,8 +366,8 @@ public class TestKeyed extends FlinkTestBase {
             ") */")));
   }
 
-  @Test
-  public void testFileUpsertWithSamePrimaryKey() throws Exception {
+  @TestIsHive
+  public void testFileUpsertWithSamePrimaryKey(boolean isHive) throws Exception {
     List<Object[]> data = new LinkedList<>();
     data.add(new Object[]{RowKind.INSERT, 1000004, "a", LocalDateTime.parse("2022-06-17T10:10:11.0")});
     data.add(new Object[]{RowKind.INSERT, 1000004, "b", LocalDateTime.parse("2022-06-17T10:10:11.0")});
@@ -417,8 +404,8 @@ public class TestKeyed extends FlinkTestBase {
     LinkedList<Row> actual = new LinkedList<>();
     try (CloseableIterator<Row> iterator = result.collect()) {
       while (iterator.hasNext()) {
-          Row row = iterator.next();
-          actual.add(row);
+        Row row = iterator.next();
+        actual.add(row);
       }
     }
 
@@ -437,12 +424,12 @@ public class TestKeyed extends FlinkTestBase {
     Map<Object, List<Row>> expectedMap = DataUtil.groupByPrimaryKey(DataUtil.toRowList(expected), 0);
 
     for (Object key : actualMap.keySet()) {
-      Assert.assertTrue(CollectionUtils.isEqualCollection(actualMap.get(key),expectedMap.get(key)));
+      Assert.assertTrue(CollectionUtils.isEqualCollection(actualMap.get(key), expectedMap.get(key)));
     }
   }
 
-  @Test
-  public void testPartitionLogSinkSource() throws Exception {
+  @TestIsHive
+  public void testPartitionLogSinkSource(boolean isHive) throws Exception {
     String topic = this.topic + "testPartitionLogSinkSource";
     kafkaTestBase.createTopics(KAFKA_PARTITION_NUMS, topic);
 
@@ -500,8 +487,8 @@ public class TestKeyed extends FlinkTestBase {
     result.getJobClient().ifPresent(TestUtil::cancelJob);
   }
 
-  @Test
-  public void testPartitionDoubleSink() throws Exception {
+  @TestIsHive
+  public void testPartitionDoubleSink(boolean isHive) throws Exception {
     String topic = this.topic + "testPartitionDoubleSink";
     kafkaTestBase.createTopics(KAFKA_PARTITION_NUMS, topic);
 

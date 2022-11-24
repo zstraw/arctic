@@ -18,10 +18,12 @@
 
 package com.netease.arctic.flink.read.hybrid.enumerator;
 
-import com.netease.arctic.flink.read.hybrid.split.TemporalJoinSplits;
+import com.netease.arctic.flink.extension.MiniClusterExtension;
 import com.netease.arctic.flink.read.hybrid.split.ArcticSplit;
+import com.netease.arctic.flink.read.hybrid.split.TemporalJoinSplits;
 import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -32,6 +34,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+@ExtendWith({MiniClusterExtension.class})
 public class TemporalJoinSplitsThreadSafeTest {
 
   @Test

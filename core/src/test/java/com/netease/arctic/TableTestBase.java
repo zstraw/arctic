@@ -53,12 +53,16 @@ import org.apache.iceberg.types.Types;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
@@ -125,14 +129,21 @@ public class TableTestBase {
 
   @Rule
   public TemporaryFolder temp = new TemporaryFolder();
+  @TempDir
+  public Path path;
 
   protected File tableDir = null;
 
   @Before
+  @BeforeEach
   public void setupTables() throws Exception {
     LOG.info("setupTables start");
     testCatalog = CatalogLoader.load(AMS.getUrl());
-    tableDir = temp.newFolder();
+    if (path != null) {
+      tableDir = path.toFile();
+    } else {
+      tableDir = temp.newFolder();
+    }
 
     String db = TABLE_ID.getDatabase();
     if (!testCatalog.listDatabases().contains(db)) {
@@ -167,6 +178,7 @@ public class TableTestBase {
   }
 
   @After
+  @AfterEach
   public void clearTable() {
     LOG.info("clearTable start");
     testCatalog.dropTable(TABLE_ID, true);

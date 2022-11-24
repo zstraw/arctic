@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.netease.arctic.flink.kafka.testutils;
+package com.netease.arctic.flink.kafka;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -32,9 +32,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
-import static com.netease.arctic.flink.kafka.testutils.KafkaConfigGenerate.getPropertiesWithByteArray;
+import static com.netease.arctic.flink.kafka.KafkaConfigGenerate.getPropertiesWithByteArray;
 
 /**
  * The base for the Kafka tests. It brings up:
@@ -64,16 +65,19 @@ public class KafkaTestBase {
 
   public Properties secureProps = new Properties();
 
+  public static AtomicBoolean START = new AtomicBoolean(false);
+
   // ------------------------------------------------------------------------
   //  Setup and teardown of the mini clusters
   // ------------------------------------------------------------------------
 
   public void prepare() throws Exception {
-    LOG.info("-------------------------------------------------------------------------");
-    LOG.info("    Starting KafkaTestBase ");
-    LOG.info("-------------------------------------------------------------------------");
-
-    startClusters(false);
+    if (!START.getAndSet(true)) {
+      LOG.info("-------------------------------------------------------------------------");
+      LOG.info("    Starting KafkaTestBase ");
+      LOG.info("-------------------------------------------------------------------------");
+      startClusters(false);
+    }
   }
 
   public void shutDownServices() throws Exception {
@@ -103,8 +107,16 @@ public class KafkaTestBase {
 
   public void startClusters(boolean secureMode)
       throws Exception {
+    Properties props = new Properties();
+    props.put("offsets.topic.num.partitions", "3");
+    props.put("offsets.topic.segment.bytes", "1048576");
+    props.put("transaction.state.log.num.partitions", "3");
+    props.put("transaction.state.log.segment.bytes", "1048576");
+    props.put("metadata.log.max.record.bytes.between.snapshots", "1048576");
+
     startClusters(
         KafkaTestEnvironment.createConfig()
+            .setKafkaServerProperties(props)
             .setKafkaServersNumber(NUMBER_OF_KAFKA_SERVERS)
             .setSecureMode(secureMode));
   }
