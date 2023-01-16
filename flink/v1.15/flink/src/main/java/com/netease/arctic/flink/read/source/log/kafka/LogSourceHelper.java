@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package com.netease.arctic.flink.read.source.log;
+package com.netease.arctic.flink.read.source.log.kafka;
 
 import com.netease.arctic.flink.read.source.log.kafka.LogKafkaPartitionSplit;
 import org.apache.flink.connector.kafka.source.split.KafkaPartitionSplit;
@@ -71,7 +71,7 @@ public class LogSourceHelper implements Serializable {
     if (split.isRetracting()) {
       retractingInfo.put(split.getTopicPartition(),
           EpicRetractingInfo.of(
-              split.getRetractingEpicNo(), split.getRetractingUpstreamId(), 
+              split.getRetractingEpicNo(), split.getRetractingUpstreamId(),
               split.getRetractStopOffset(), split.getRevertStartOffset()));
     }
     Map<String, Long> upStreamEpicStartOffsets = split.getUpStreamEpicStartOffsets();
@@ -174,7 +174,7 @@ public class LogSourceHelper implements Serializable {
     String key = combineTopicPartitionAndUpstreamIdAndEpicNo(tp, upstreamId, epicNo);
     upstreamEpicStartOffsets.putIfAbsent(key, startOffset);
   }
-  
+
   private String combineTopicPartitionAndUpstreamIdAndEpicNo(TopicPartition tp, String upstreamId, long epicNo) {
     return combineTopicPartitionAndUpstreamId(tp, upstreamId) + "_" + epicNo;
   }

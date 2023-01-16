@@ -49,7 +49,7 @@ import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
 
-import static com.netease.arctic.flink.read.source.log.LogSourceHelper.checkMagicNum;
+import static com.netease.arctic.flink.read.source.log.kafka.LogSourceHelper.checkMagicNum;
 import static com.netease.arctic.flink.table.descriptors.ArcticValidator.LOG_CONSUMER_CHANGELOG_MODE_APPEND_ONLY;
 
 /**
