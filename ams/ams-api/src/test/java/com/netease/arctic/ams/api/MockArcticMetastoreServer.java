@@ -39,6 +39,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static com.netease.arctic.ams.api.properties.CatalogMetaProperties.CATALOG_TYPE_HADOOP;
@@ -62,6 +63,8 @@ public class MockArcticMetastoreServer implements Runnable {
 
   public static MockArcticMetastoreServer getInstance() {
     if (!INSTANCE.isStarted()) {
+      DeadlockDetector deadlockDetector = new DeadlockDetector(new DeadlockLogHandler(), 5, TimeUnit.SECONDS);
+      deadlockDetector.start();
       INSTANCE.start();
       Map<String, String> storageConfig = new HashMap<>();
       storageConfig.put(CatalogMetaProperties.STORAGE_CONFIGS_KEY_TYPE,
