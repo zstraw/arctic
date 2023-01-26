@@ -3,6 +3,7 @@ package com.netease.arctic.ams.api;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
+import java.util.Arrays;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -19,11 +20,13 @@ public class DeadlockDetector {
   final Runnable deadlockCheck = new Runnable() {
     @Override
     public void run() {
-      long[] deadlockedThreadIds = DeadlockDetector.this.mbean.findDeadlockedThreads();
+      ThreadInfo[] deadlockedThreadIds = DeadlockDetector.this.mbean
+          .dumpAllThreads(true, true);
 
       if (deadlockedThreadIds != null) {
         ThreadInfo[] threadInfos =
-            DeadlockDetector.this.mbean.getThreadInfo(deadlockedThreadIds);
+            DeadlockDetector.this.mbean.getThreadInfo(
+                Arrays.stream(deadlockedThreadIds).mapToLong(ThreadInfo::getThreadId).toArray());
 
         DeadlockDetector.this.deadlockHandler.handleDeadlock(threadInfos);
       }
