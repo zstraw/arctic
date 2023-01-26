@@ -13,7 +13,7 @@ public class DeadlockLogHandler implements DeadlockHandler {
   @Override
   public void handleDeadlock(final ThreadInfo[] deadlockedThreads) {
     if (deadlockedThreads != null) {
-      LOG.error("Deadlock detected!");
+      LOG.info("Deadlock detected!");
 
       Map<Thread, StackTraceElement[]> stackTraceMap = Thread.getAllStackTraces();
       for (ThreadInfo threadInfo : deadlockedThreads) {
@@ -23,10 +23,10 @@ public class DeadlockLogHandler implements DeadlockHandler {
           for (Thread thread : stackTraceMap.keySet()) {
 
             if (thread.getId() == threadInfo.getThreadId()) {
-              LOG.error(threadInfo.toString().trim());
+              LOG.info(threadInfo.toString().trim());
 
               for (StackTraceElement ste : thread.getStackTrace()) {
-                LOG.error("\t" + ste.toString().trim());
+                LOG.info("\t" + ste.toString().trim());
               }
             }
           }
