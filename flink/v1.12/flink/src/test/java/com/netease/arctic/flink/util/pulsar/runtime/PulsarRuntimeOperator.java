@@ -425,7 +425,7 @@ public class PulsarRuntimeOperator implements Closeable {
     List<String> subscriptions = sneakyAdmin(() -> admin().topics().getSubscriptions(topic));
     if (subscriptions.contains(SUBSCRIPTION_NAME)) {
       sneakyAdmin(
-          () -> admin().topics().deleteSubscription(topic, SUBSCRIPTION_NAME));
+          () -> admin().topics().deleteSubscription(topic, SUBSCRIPTION_NAME, true));
     }
   }
 

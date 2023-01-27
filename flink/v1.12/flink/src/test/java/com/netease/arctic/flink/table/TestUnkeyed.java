@@ -172,6 +172,8 @@ public class TestUnkeyed extends FlinkTestBase {
     }
     if (Objects.equals(logType, LOG_STORE_STORAGE_TYPE_PULSAR)) {
       pulsarHelper.op().deleteTopicByForce(topic);
+    } else {
+      kafkaTestBase.deleteTestTopic(topic);
     }
   }
 
