@@ -173,7 +173,7 @@ public class MockArcticMetastoreServer implements Runnable {
       server = new TThreadedSelectorServer(args);
       server.serve();
 
-      LOG.info("arctic in-memory metastore start");
+      LOG.info("arctic in-memory metastore start at {}", port);
     } catch (TTransportException e) {
       if (e.getCause() instanceof BindException) {
         if (--retry < 0) {
@@ -225,7 +225,7 @@ public class MockArcticMetastoreServer implements Runnable {
 
     @Override
     public void ping() throws TException {
-
+      LOG.info("ping in server");
     }
 
     @Override
