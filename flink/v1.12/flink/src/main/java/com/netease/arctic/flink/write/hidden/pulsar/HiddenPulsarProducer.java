@@ -140,6 +140,7 @@ public class HiddenPulsarProducer<T> implements LogMsgFactory.Producer<T> {
             .topic(topic).create()
             .newMessage(tx).value(message)
             .send();
+        LOG.info("send flip to topic: {}", topic);
       }
       tx.commit();
       LOG.info("finished flips sending, cost {}ms.", System.currentTimeMillis() - start);
