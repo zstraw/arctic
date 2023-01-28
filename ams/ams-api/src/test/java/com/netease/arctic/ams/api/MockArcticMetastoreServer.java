@@ -156,7 +156,7 @@ public class MockArcticMetastoreServer implements Runnable {
   @Override
   public void run() {
     try {
-      TNonblockingServerSocket serverTransport = new TNonblockingServerSocket(port);
+      TNonblockingServerSocket serverTransport = new TNonblockingServerSocket(port, 5000);
       TMultiplexedProcessor processor = new TMultiplexedProcessor();
       ArcticTableMetastore.Processor<AmsHandler> amsProcessor =
           new ArcticTableMetastore.Processor<>(amsHandler);
