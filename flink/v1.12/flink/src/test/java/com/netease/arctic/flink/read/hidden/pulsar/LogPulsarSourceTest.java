@@ -82,7 +82,7 @@ public class LogPulsarSourceTest extends TableTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(LogPulsarSourceTest.class);
 
   @ClassRule
-  public static PulsarTestEnvironment environment = new PulsarTestEnvironment(PulsarRuntime.container());
+  public static PulsarTestEnvironment environment = new PulsarTestEnvironment(PulsarRuntime.mock());
   public String TOPIC = "LogPulsarSourceTest_";
   public static final int PARALLELISM = 3;
   private List<LogData<RowData>> dataInPulsar;
