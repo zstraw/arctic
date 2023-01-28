@@ -33,6 +33,8 @@ import org.apache.iceberg.common.DynConstructors;
 import org.apache.iceberg.relocated.com.google.common.base.Preconditions;
 import org.apache.iceberg.relocated.com.google.common.collect.Maps;
 import org.apache.thrift.TException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
@@ -48,7 +50,7 @@ import static com.netease.arctic.ams.api.properties.CatalogMetaProperties.CATALO
  * Catalogs, create catalog from arctic metastore thrift url.
  */
 public class CatalogLoader {
-
+  private static final Logger LOG = LoggerFactory.getLogger(CatalogLoader.class);
   public static final String AMS_CATALOG_IMPL = BaseArcticCatalog.class.getName();
   public static final String ICEBERG_CATALOG_IMPL = BaseIcebergCatalog.class.getName();
   public static final String HIVE_CATALOG_IMPL = "com.netease.arctic.hive.catalog.ArcticHiveCatalog";
@@ -62,6 +64,7 @@ public class CatalogLoader {
    */
   public static ArcticCatalog load(String catalogUrl, Map<String, String> properties) {
     ArcticThriftUrl url = ArcticThriftUrl.parse(catalogUrl);
+    LOG.info("load Arctic catalog from: {}", url);
     if (url.catalogName() == null || url.catalogName().contains("/")) {
       throw new IllegalArgumentException("invalid catalog name " + url.catalogName());
     }
