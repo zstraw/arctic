@@ -171,9 +171,9 @@ public class MockArcticMetastoreServer implements Runnable {
           .transportFactory(new TFramedTransport.Factory())
           .workerThreads(10);
       server = new TThreadedSelectorServer(args);
-      server.serve();
 
-      LOG.info("arctic in-memory metastore start at {}", port);
+      LOG.info("arctic in-memory metastore try to serve at {}", port);
+      server.serve();
     } catch (TTransportException e) {
       if (e.getCause() instanceof BindException) {
         if (--retry < 0) {
