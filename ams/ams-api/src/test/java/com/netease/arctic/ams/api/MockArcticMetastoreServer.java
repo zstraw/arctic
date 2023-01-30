@@ -63,7 +63,7 @@ public class MockArcticMetastoreServer implements Runnable {
 
   public static MockArcticMetastoreServer getInstance() {
     if (!INSTANCE.isStarted()) {
-      DeadlockDetector deadlockDetector = new DeadlockDetector(new DeadlockLogHandler(), 5, TimeUnit.SECONDS);
+      DeadlockDetector deadlockDetector = new DeadlockDetector(new DeadlockLogHandler(), 20, TimeUnit.SECONDS);
       deadlockDetector.start();
       INSTANCE.start();
       Map<String, String> storageConfig = new HashMap<>();
