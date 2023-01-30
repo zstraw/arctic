@@ -485,7 +485,9 @@ public class ArcticSourceTest extends RowDataReaderFunctionTest implements Seria
     final Iterator<RowData> iterator = client.iterator;
 
     while (iterator.hasNext()) {
-      result.add(convert(iterator.next()));
+      RowData rowData = convert(iterator.next());
+      LOG.info("read data: {}", rowData);
+      result.add(rowData);
       if (result.size() == numElements) {
         return result;
       }
