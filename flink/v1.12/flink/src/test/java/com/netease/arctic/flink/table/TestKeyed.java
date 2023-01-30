@@ -49,6 +49,8 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -77,6 +79,8 @@ import static org.apache.flink.table.api.Expressions.$;
 
 @RunWith(Parameterized.class)
 public class TestKeyed extends FlinkTestBase {
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestKeyed.class);
 
   @Rule
   public TemporaryFolder tempFolder = new TemporaryFolder();
@@ -229,6 +233,7 @@ public class TestKeyed extends FlinkTestBase {
     expected.add(new Object[]{RowKind.INSERT, 1000015, LocalDateTime.parse("2022-06-17T10:10:11.0"),
         LocalDateTime.parse("2022-06-17T10:10:11.0").atZone(ZoneId.systemDefault()).toInstant()});
 
+    LOG.info("actual: {}", actual);
     Assert.assertTrue(CollectionUtils.isEqualCollection(DataUtil.toRowList(expected), actual));
   }
 
