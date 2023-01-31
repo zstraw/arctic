@@ -39,6 +39,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static com.netease.arctic.ams.api.properties.CatalogMetaProperties.CATALOG_TYPE_HADOOP;
@@ -62,6 +63,8 @@ public class MockArcticMetastoreServer implements Runnable {
 
   public static MockArcticMetastoreServer getInstance() {
     if (!INSTANCE.isStarted()) {
+      DeadlockDetector deadlockDetector = new DeadlockDetector(new DeadlockLogHandler(), 20, TimeUnit.SECONDS);
+      deadlockDetector.start();
       INSTANCE.start();
       Map<String, String> storageConfig = new HashMap<>();
       storageConfig.put(CatalogMetaProperties.STORAGE_CONFIGS_KEY_TYPE,
@@ -100,6 +103,10 @@ public class MockArcticMetastoreServer implements Runnable {
 
   public static String getHadoopSite() {
     return Base64.getEncoder().encodeToString("<configuration></configuration>".getBytes(StandardCharsets.UTF_8));
+  }
+
+  public String getServerUrl() {
+    return "thrift://127.0.0.1:" + port;
   }
 
   public String getUrl() {
@@ -149,7 +156,7 @@ public class MockArcticMetastoreServer implements Runnable {
   @Override
   public void run() {
     try {
-      TNonblockingServerSocket serverTransport = new TNonblockingServerSocket(port);
+      TNonblockingServerSocket serverTransport = new TNonblockingServerSocket(port, 5000);
       TMultiplexedProcessor processor = new TMultiplexedProcessor();
       ArcticTableMetastore.Processor<AmsHandler> amsProcessor =
           new ArcticTableMetastore.Processor<>(amsHandler);
@@ -164,9 +171,9 @@ public class MockArcticMetastoreServer implements Runnable {
           .transportFactory(new TFramedTransport.Factory())
           .workerThreads(10);
       server = new TThreadedSelectorServer(args);
-      server.serve();
 
-      LOG.info("arctic in-memory metastore start");
+      LOG.info("arctic in-memory metastore try to serve at {}", port);
+      server.serve();
     } catch (TTransportException e) {
       if (e.getCause() instanceof BindException) {
         if (--retry < 0) {
@@ -204,6 +211,10 @@ public class MockArcticMetastoreServer implements Runnable {
       catalogs.add(catalogMeta);
     }
 
+    public void dropCatalog(String catalogName) {
+      catalogs.removeIf(catalogMeta -> catalogMeta.getCatalogName().equals(catalogName));
+    }
+
     public Map<TableIdentifier, List<TableCommitMeta>> getTableCommitMetas() {
       return tableCommitMetas;
     }
@@ -214,7 +225,7 @@ public class MockArcticMetastoreServer implements Runnable {
 
     @Override
     public void ping() throws TException {
-
+      LOG.info("ping in server");
     }
 
     @Override
@@ -236,10 +247,10 @@ public class MockArcticMetastoreServer implements Runnable {
     @Override
     public void createDatabase(String catalogName, String database) throws TException {
       databases.computeIfAbsent(catalogName, c -> new ArrayList<>());
+      if (databases.get(catalogName).contains(database)) {
+        throw new AlreadyExistsException("database exist");
+      }
       databases.computeIfPresent(catalogName, (c, dbList) -> {
-        if (dbList.contains(database)) {
-          throw new IllegalStateException("database exist");
-        }
         List<String> newList = new ArrayList<>(dbList);
         newList.add(database);
         return newList;
@@ -329,7 +340,7 @@ public class MockArcticMetastoreServer implements Runnable {
     }
 
      public void updateMeta(CatalogMeta meta, String key, String value) {
-      meta.getCatalogProperties().replace(key, value);
+      meta.getCatalogProperties().put(key, value);
      }
   }
 

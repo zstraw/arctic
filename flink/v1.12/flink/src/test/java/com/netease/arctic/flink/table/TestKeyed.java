@@ -21,6 +21,9 @@ package com.netease.arctic.flink.table;
 import com.netease.arctic.flink.FlinkTestBase;
 import com.netease.arctic.flink.util.DataUtil;
 import com.netease.arctic.flink.util.TestUtil;
+import com.netease.arctic.flink.util.pulsar.LogPulsarHelper;
+import com.netease.arctic.flink.util.pulsar.PulsarTestEnvironment;
+import com.netease.arctic.flink.util.pulsar.runtime.PulsarRuntime;
 import com.netease.arctic.hive.HiveTableTestBase;
 import com.netease.arctic.table.TableProperties;
 import org.apache.commons.collections.CollectionUtils;
@@ -38,12 +41,16 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -55,6 +62,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import static com.netease.arctic.ams.api.MockArcticMetastoreServer.TEST_CATALOG_NAME;
@@ -62,13 +70,22 @@ import static com.netease.arctic.table.TableProperties.ENABLE_LOG_STORE;
 import static com.netease.arctic.table.TableProperties.LOCATION;
 import static com.netease.arctic.table.TableProperties.LOG_STORE_ADDRESS;
 import static com.netease.arctic.table.TableProperties.LOG_STORE_MESSAGE_TOPIC;
+import static com.netease.arctic.table.TableProperties.LOG_STORE_PROPERTIES_PREFIX;
+import static com.netease.arctic.table.TableProperties.LOG_STORE_STORAGE_TYPE_KAFKA;
+import static com.netease.arctic.table.TableProperties.LOG_STORE_STORAGE_TYPE_PULSAR;
+import static com.netease.arctic.table.TableProperties.LOG_STORE_TYPE;
+import static org.apache.flink.connector.pulsar.common.config.PulsarOptions.PULSAR_ADMIN_URL;
 import static org.apache.flink.table.api.Expressions.$;
 
 @RunWith(Parameterized.class)
 public class TestKeyed extends FlinkTestBase {
 
+  private static final Logger LOG = LoggerFactory.getLogger(TestKeyed.class);
+
   @Rule
   public TemporaryFolder tempFolder = new TemporaryFolder();
+  @Rule
+  public TestName testName = new TestName();
 
   private static final String DB = PK_TABLE_ID.getDatabase();
   private static final String TABLE = "test_keyed";
@@ -77,19 +94,30 @@ public class TestKeyed extends FlinkTestBase {
   private String db;
   private String topic;
   private HiveTableTestBase hiveTableTestBase = new HiveTableTestBase();
+  private Map<String, String> tableProperties = new HashMap<>();
+  @ClassRule
+  public static PulsarTestEnvironment environment = new PulsarTestEnvironment(PulsarRuntime.mock());
+  private static LogPulsarHelper pulsarHelper;
 
   @Parameterized.Parameter
   public boolean isHive;
+  @Parameterized.Parameter(1)
+  public String logType;
 
-  @Parameterized.Parameters(name = "isHive = {0}")
-  public static Collection<Boolean> parameters() {
-    return Arrays.asList(false);
+  @Parameterized.Parameters(name = "isHive = {0}, logType = {1}")
+  public static Collection parameters() {
+    return Arrays.asList(
+        new Object[][]{
+            {false, LOG_STORE_STORAGE_TYPE_KAFKA},
+            {false, LOG_STORE_STORAGE_TYPE_PULSAR}
+        });
   }
 
   @BeforeClass
   public static void beforeClass() throws Exception {
     HiveTableTestBase.startMetastore();
     FlinkTestBase.prepare();
+    pulsarHelper = new LogPulsarHelper(environment);
   }
 
   @AfterClass
@@ -107,8 +135,27 @@ public class TestKeyed extends FlinkTestBase {
       db = DB;
       super.before();
     }
-    topic = String.join(".", catalog, db, TABLE);
+    prepareLog();
+
     super.config(catalog);
+  }
+
+  private void prepareLog() {
+    topic = TestUtil.getUtMethodName(testName);
+    tableProperties.clear();
+    tableProperties.put(ENABLE_LOG_STORE, "true");
+    tableProperties.put(LOG_STORE_MESSAGE_TOPIC, topic);
+
+    if (Objects.equals(logType, LOG_STORE_STORAGE_TYPE_PULSAR)) {
+      pulsarHelper.op().createTopic(topic, 1);
+      tableProperties.put(LOG_STORE_ADDRESS, pulsarHelper.op().serviceUrl());
+      tableProperties.put(LOG_STORE_TYPE, LOG_STORE_STORAGE_TYPE_PULSAR);
+      tableProperties.put(LOG_STORE_PROPERTIES_PREFIX + PULSAR_ADMIN_URL.key(), pulsarHelper.op().adminUrl());
+    } else {
+      kafkaTestBase.createTopics(KAFKA_PARTITION_NUMS, topic);
+      tableProperties.put(LOG_STORE_TYPE, LOG_STORE_STORAGE_TYPE_KAFKA);
+      tableProperties.put(LOG_STORE_ADDRESS, kafkaTestBase.brokerConnectionStrings);
+    }
   }
 
   @After
@@ -116,6 +163,9 @@ public class TestKeyed extends FlinkTestBase {
     sql("DROP TABLE IF EXISTS arcticCatalog." + db + "." + TABLE);
     if (isHive) {
       hiveTableTestBase.clearTable();
+    }
+    if (Objects.equals(logType, LOG_STORE_STORAGE_TYPE_PULSAR)) {
+      pulsarHelper.op().deleteTopicByForce(topic);
     }
   }
 
@@ -183,14 +233,12 @@ public class TestKeyed extends FlinkTestBase {
     expected.add(new Object[]{RowKind.INSERT, 1000015, LocalDateTime.parse("2022-06-17T10:10:11.0"),
         LocalDateTime.parse("2022-06-17T10:10:11.0").atZone(ZoneId.systemDefault()).toInstant()});
 
+    LOG.info("actual: {}", actual);
     Assert.assertTrue(CollectionUtils.isEqualCollection(DataUtil.toRowList(expected), actual));
   }
 
   @Test
   public void testUnpartitionLogSinkSource() throws Exception {
-    String topic = this.topic + "testUnpartitionLogSinkSource";
-    kafkaTestBase.createTopics(KAFKA_PARTITION_NUMS, topic);
-
     List<Object[]> data = new LinkedList<>();
     data.add(new Object[]{1000004, "a"});
     data.add(new Object[]{1000015, "b"});
@@ -211,10 +259,6 @@ public class TestKeyed extends FlinkTestBase {
 
     sql("CREATE CATALOG arcticCatalog WITH %s", toWithClause(props));
 
-    Map<String, String> tableProperties = new HashMap<>();
-    tableProperties.put(ENABLE_LOG_STORE, "true");
-    tableProperties.put(LOG_STORE_ADDRESS, kafkaTestBase.brokerConnectionStrings);
-    tableProperties.put(LOG_STORE_MESSAGE_TOPIC, topic);
     tableProperties.put(LOCATION, tableDir.getAbsolutePath() + "/" + TABLE);
     sql("CREATE TABLE IF NOT EXISTS arcticCatalog." + db + "." + TABLE + "(" +
         " id INT, name STRING, PRIMARY KEY (id) NOT ENFORCED) WITH %s", toWithClause(tableProperties));
@@ -245,9 +289,6 @@ public class TestKeyed extends FlinkTestBase {
 
   @Test
   public void testUnPartitionDoubleSink() throws Exception {
-    String topic = this.topic + "testUnPartitionDoubleSink";
-    kafkaTestBase.createTopics(KAFKA_PARTITION_NUMS, topic);
-
     List<Object[]> data = new LinkedList<>();
     data.add(new Object[]{1000004, "a"});
     data.add(new Object[]{1000015, "b"});
@@ -267,10 +308,6 @@ public class TestKeyed extends FlinkTestBase {
     getTableEnv().createTemporaryView("input", input);
     sql("CREATE CATALOG arcticCatalog WITH %s", toWithClause(props));
 
-    Map<String, String> tableProperties = new HashMap<>();
-    tableProperties.put(ENABLE_LOG_STORE, "true");
-    tableProperties.put(LOG_STORE_ADDRESS, kafkaTestBase.brokerConnectionStrings);
-    tableProperties.put(LOG_STORE_MESSAGE_TOPIC, topic);
     tableProperties.put(LOCATION, tableDir.getAbsolutePath() + "/" + TABLE);
     sql("CREATE TABLE IF NOT EXISTS arcticCatalog." + db + "." + TABLE + "(" +
         " id INT, name STRING, PRIMARY KEY (id) NOT ENFORCED) WITH %s", toWithClause(tableProperties));
@@ -420,8 +457,8 @@ public class TestKeyed extends FlinkTestBase {
     LinkedList<Row> actual = new LinkedList<>();
     try (CloseableIterator<Row> iterator = result.collect()) {
       while (iterator.hasNext()) {
-          Row row = iterator.next();
-          actual.add(row);
+        Row row = iterator.next();
+        actual.add(row);
       }
     }
 
@@ -440,15 +477,12 @@ public class TestKeyed extends FlinkTestBase {
     Map<Object, List<Row>> expectedMap = DataUtil.groupByPrimaryKey(DataUtil.toRowList(expected), 0);
 
     for (Object key : actualMap.keySet()) {
-      Assert.assertTrue(CollectionUtils.isEqualCollection(actualMap.get(key),expectedMap.get(key)));
+      Assert.assertTrue(CollectionUtils.isEqualCollection(actualMap.get(key), expectedMap.get(key)));
     }
   }
 
   @Test
   public void testPartitionLogSinkSource() throws Exception {
-    String topic = this.topic + "testPartitionLogSinkSource";
-    kafkaTestBase.createTopics(KAFKA_PARTITION_NUMS, topic);
-
     List<Object[]> data = new LinkedList<>();
     data.add(new Object[]{1000004, "a", LocalDateTime.parse("2022-06-17T10:10:11.0")});
     data.add(new Object[]{1000015, "b", LocalDateTime.parse("2022-06-17T10:10:11.0")});
@@ -471,10 +505,6 @@ public class TestKeyed extends FlinkTestBase {
 
     sql("CREATE CATALOG arcticCatalog WITH %s", toWithClause(props));
 
-    Map<String, String> tableProperties = new HashMap<>();
-    tableProperties.put(ENABLE_LOG_STORE, "true");
-    tableProperties.put(LOG_STORE_ADDRESS, kafkaTestBase.brokerConnectionStrings);
-    tableProperties.put(LOG_STORE_MESSAGE_TOPIC, topic);
     tableProperties.put(LOCATION, tableDir.getAbsolutePath() + "/" + TABLE);
     sql("CREATE TABLE IF NOT EXISTS arcticCatalog." + db + "." + TABLE + "(" +
         " id INT, name STRING, op_time TIMESTAMP, PRIMARY KEY (id) NOT ENFORCED " +
@@ -505,9 +535,6 @@ public class TestKeyed extends FlinkTestBase {
 
   @Test
   public void testPartitionDoubleSink() throws Exception {
-    String topic = this.topic + "testPartitionDoubleSink";
-    kafkaTestBase.createTopics(KAFKA_PARTITION_NUMS, topic);
-
     List<Object[]> data = new LinkedList<>();
     data.add(new Object[]{1000004, "a", LocalDateTime.parse("2022-06-17T10:10:11.0")});
     data.add(new Object[]{1000015, "b", LocalDateTime.parse("2022-06-17T10:10:11.0")});
@@ -529,10 +556,6 @@ public class TestKeyed extends FlinkTestBase {
     getTableEnv().createTemporaryView("input", input);
     sql("CREATE CATALOG arcticCatalog WITH %s", toWithClause(props));
 
-    Map<String, String> tableProperties = new HashMap<>();
-    tableProperties.put(ENABLE_LOG_STORE, "true");
-    tableProperties.put(LOG_STORE_ADDRESS, kafkaTestBase.brokerConnectionStrings);
-    tableProperties.put(LOG_STORE_MESSAGE_TOPIC, topic);
     tableProperties.put(LOCATION, tableDir.getAbsolutePath() + "/" + TABLE);
     sql("CREATE TABLE IF NOT EXISTS arcticCatalog." + db + "." + TABLE + "(" +
         " id INT, name STRING, op_time TIMESTAMP, PRIMARY KEY (id) NOT ENFORCED " +

@@ -57,11 +57,13 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 
+import static com.netease.arctic.flink.FlinkSchemaUtil.getPhysicalSchema;
 import static com.netease.arctic.flink.catalog.descriptors.ArcticCatalogValidator.METASTORE_URL;
 import static com.netease.arctic.flink.catalog.descriptors.ArcticCatalogValidator.METASTORE_URL_OPTION;
 import static com.netease.arctic.flink.table.descriptors.ArcticValidator.SCAN_STARTUP_MODE;
 import static com.netease.arctic.flink.table.descriptors.ArcticValidator.SCAN_STARTUP_MODE_TIMESTAMP;
 import static com.netease.arctic.flink.table.descriptors.ArcticValidator.SCAN_STARTUP_TIMESTAMP_MILLIS;
+import static com.netease.arctic.flink.util.CompatibleFlinkPropertyUtil.getLogStoreProperties;
 import static com.netease.arctic.table.TableProperties.ENABLE_LOG_STORE;
 import static com.netease.arctic.table.TableProperties.ENABLE_LOG_STORE_DEFAULT;
 import static org.apache.flink.streaming.connectors.kafka.table.KafkaOptions.PROPS_BOOTSTRAP_SERVERS;
@@ -139,7 +141,7 @@ public class DynamicTableFactory implements DynamicTableSourceFactory, DynamicTa
 
     boolean dimTable = CompatibleFlinkPropertyUtil.propertyAsBoolean(arcticTable.properties(),
         ArcticValidator.DIM_TABLE_ENABLE.key(), ArcticValidator.DIM_TABLE_ENABLE.defaultValue());
-    TableSchema tableSchema = com.netease.arctic.flink.FlinkSchemaUtil.getPhysicalSchema(catalogTable.getSchema(),
+    TableSchema tableSchema = getPhysicalSchema(catalogTable.getSchema(),
         dimTable);
     switch (readMode) {
       case ArcticValidator.ARCTIC_READ_FILE:
@@ -227,7 +229,7 @@ public class DynamicTableFactory implements DynamicTableSourceFactory, DynamicTa
 
     validateSourceTopic(tableOptions);
 
-    final Properties properties = getKafkaProperties(arcticTable.properties());
+    final Properties properties = getLogStoreProperties(arcticTable.properties());
 
     // add topic-partition discovery
     final Optional<Long> partitionDiscoveryInterval =
