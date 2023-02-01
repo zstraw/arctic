@@ -27,6 +27,7 @@ import com.netease.arctic.table.ArcticTable;
 import com.netease.arctic.table.TableIdentifier;
 import com.netease.arctic.table.TableProperties;
 import com.netease.arctic.utils.CompatiblePropertyUtil;
+import org.apache.flink.api.common.serialization.DeserializationSchema;
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.ReadableConfig;
@@ -35,8 +36,11 @@ import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.catalog.CatalogTable;
 import org.apache.flink.table.catalog.ObjectIdentifier;
 import org.apache.flink.table.catalog.ObjectPath;
+import org.apache.flink.table.connector.format.DecodingFormat;
 import org.apache.flink.table.connector.source.DynamicTableSource;
 import org.apache.flink.table.connector.source.ScanTableSource;
+import org.apache.flink.table.data.RowData;
+import org.apache.flink.table.factories.DeserializationFormatFactory;
 import org.apache.flink.table.factories.DynamicTableSinkFactory;
 import org.apache.flink.table.factories.DynamicTableSourceFactory;
 import org.apache.flink.table.factories.FactoryUtil;
@@ -71,6 +75,7 @@ import static org.apache.flink.streaming.connectors.kafka.table.KafkaOptions.PRO
 import static org.apache.flink.streaming.connectors.kafka.table.KafkaOptions.SCAN_TOPIC_PARTITION_DISCOVERY;
 import static org.apache.flink.streaming.connectors.kafka.table.KafkaOptions.SINK_PARTITIONER;
 import static org.apache.flink.streaming.connectors.kafka.table.KafkaOptions.TOPIC;
+import static org.apache.flink.streaming.connectors.kafka.table.KafkaOptions.VALUE_FORMAT;
 import static org.apache.flink.streaming.connectors.kafka.table.KafkaOptions.createValueFormatProjection;
 import static org.apache.flink.streaming.connectors.kafka.table.KafkaOptions.getKafkaProperties;
 import static org.apache.flink.streaming.connectors.kafka.table.KafkaOptions.getSourceTopicPattern;
@@ -219,6 +224,7 @@ public class DynamicTableFactory implements DynamicTableSourceFactory, DynamicTa
     options.add(ArcticValidator.ARCTIC_DATABASE);
     options.add(ArcticValidator.DIM_TABLE_ENABLE);
     options.add(METASTORE_URL_OPTION);
+    options.add(ArcticValidator.ARCTIC_LOG_KAFKA_COMPATIBLE_ENABLE);
     return options;
   }
 
@@ -226,7 +232,8 @@ public class DynamicTableFactory implements DynamicTableSourceFactory, DynamicTa
     CatalogTable catalogTable = context.getCatalogTable();
     TableSchema physicalSchema = TableSchemaUtils.getPhysicalSchema(catalogTable.getSchema());
     Schema schema = FlinkSchemaUtil.convert(physicalSchema);
-
+    FactoryUtil.TableFactoryHelper helper = FactoryUtil.createTableFactoryHelper(this, context);
+    
     validateSourceTopic(tableOptions);
 
     final Properties properties = getLogStoreProperties(arcticTable.properties());
@@ -242,7 +249,8 @@ public class DynamicTableFactory implements DynamicTableSourceFactory, DynamicTa
         catalogTable.getSchema().toPhysicalRowDataType();
 
     final int[] valueProjection = createValueFormatProjection(tableOptions, physicalDataType);
-
+    final DecodingFormat<DeserializationSchema<RowData>> valueDecodingFormat = getValueDecodingFormat(helper);
+    
     String startupMode = tableOptions.get(SCAN_STARTUP_MODE);
     long startupTimestampMillis = 0L;
     if (Objects.equals(startupMode.toLowerCase(), SCAN_STARTUP_MODE_TIMESTAMP)) {
@@ -252,7 +260,10 @@ public class DynamicTableFactory implements DynamicTableSourceFactory, DynamicTa
     }
 
     LOG.info("build log source");
-    return new LogDynamicSource(valueProjection,
+    return new LogDynamicSource(
+        physicalDataType,
+        valueDecodingFormat,
+        valueProjection,
         getSourceTopics(tableOptions),
         getSourceTopicPattern(tableOptions),
         properties,
@@ -263,4 +274,13 @@ public class DynamicTableFactory implements DynamicTableSourceFactory, DynamicTa
         arcticTable);
   }
 
+  private static DecodingFormat<DeserializationSchema<RowData>> getValueDecodingFormat(
+      FactoryUtil.TableFactoryHelper helper) {
+    return helper.discoverOptionalDecodingFormat(
+            DeserializationFormatFactory.class, FactoryUtil.FORMAT)
+        .orElseGet(
+            () ->
+                helper.discoverDecodingFormat(
+                    DeserializationFormatFactory.class, VALUE_FORMAT));
+  }
 }
